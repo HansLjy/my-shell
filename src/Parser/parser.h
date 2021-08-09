@@ -56,6 +56,8 @@ private:
 	void MergeNode (std::stack<int>&, std::stack<Node*>&);
 	std::vector<Operator> _operators;		// 存储的运算符
 
+	void ClearUp(std::stack<Node*>&);		// 发生 exception 的时候完成清理工作
+
 };
 
 #endif //MYSHELL_PARSER_H

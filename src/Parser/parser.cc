@@ -14,9 +14,11 @@ Parser* Parser::theParser = nullptr;
 Parser *Parser::Instance() {	// 使用时再初始化
 	if (theParser == nullptr) {
 		theParser = new Parser;
+		// 添加左括号
 		theParser->AddOperator(Operator{
 			Token ("("), 100, kNullType
 		});
+		// 添加右括号
 		theParser->AddOperator(Operator{
 			Token (")"), 100, kNullType
 		});
@@ -25,38 +27,47 @@ Parser *Parser::Instance() {	// 使用时再初始化
 }
 
 void Parser::AddOperator(const Operator& op) {
+	// 添加运算符，直接加入 _operators 数组即可
 	_operators.push_back(op);
 }
 
 Operator Parser::GetOperator(int id) {
-	if (id < 0 || id >= _operators.size()) {
-		throw Exception ("Out of range!");
-	}
+	// 获取 id 对应的运算符，直接从 _operator 中返回即可
 	return _operators[id];
 }
 
 // 把当前栈顶的元素缩成一个元素
+// 警告：调用此函数的时候务必保证符号栈上至少有一个有效的符号
 void Parser::MergeNode (
 	std::stack<int>& operator_stack,
 	std::stack<Node*>& operand_stack
 ) {
-	auto node_factory = NodeFactory::Instance();
-	int top_id = operator_stack.top();
-	Operator top_op = GetOperator(top_id);
+	auto node_factory = NodeFactory::Instance();	// 节点工厂
+	int top_id = operator_stack.top();				// 当前栈顶的运算符 id
+	Operator top_op = GetOperator(top_id);			// 当前栈顶的运算符
 	auto node = node_factory->CreateCompositeNode(top_op._type);
-	std::stack<Node*> tmp;
+	std::stack<Node*> tmp;	// 用于逆序输出栈上的元素
 	while (!operator_stack.empty() &&  operator_stack.top() == top_id) {
+		// 把所有用同一符号连接起来的节点合成一个
 		tmp.push(operand_stack.top());
 		operator_stack.pop();
 		operand_stack.pop();
 	}
-	node->AppendChild(operand_stack.top());
+	node->AppendChild(operand_stack.top());	// 节点个数应该比操作符多一个
 	operand_stack.pop();
 	while (!tmp.empty()) {
 		node->AppendChild(tmp.top());
 		tmp.pop();
 	}
 	operand_stack.push(node);
+}
+
+// 为了实现 exception safe,需要在异常发生的时候回收垃圾
+void Parser::ClearUp(std::stack<Node *>& stack) {
+	while (!stack.empty()) {
+		delete stack.top();
+		stack.pop();
+	}
 }
 
 Node *Parser::Parse(char *str) {
@@ -96,6 +107,7 @@ Node *Parser::Parse(char *str) {
 					MergeNode(operator_stack, operand_stack);
 				}
 				if (operator_stack.empty()) {
+					ClearUp(operand_stack);
 					throw Exception ("Unpaired right bracket!");
 				}
 				operator_stack.pop();
@@ -103,6 +115,7 @@ Node *Parser::Parse(char *str) {
 				// 如果是左括号，直接压入栈中
 				operator_stack.push(op_id);
 			} else {
+				ClearUp(operand_stack);
 				throw Exception ("What the hack is this ID?");
 			}
 		}
@@ -116,10 +129,15 @@ Node *Parser::Parse(char *str) {
 	if (operand_stack.size() == operator_stack.size()) {
 		operand_stack.push(node_factory->CreateNullNode());
 	}
+	if (operand_stack.size() != operator_stack.size() + 1) {
+		ClearUp(operand_stack);
+		throw Exception("Unexpected token, need operator to connect them");
+	}
 	while (!operator_stack.empty() && operator_stack.top() != kLeftBracket) {
 		MergeNode(operator_stack, operand_stack);
 	}
 	if (!operator_stack.empty()) {	// 如果还有左括号没有匹配完
+		ClearUp(operand_stack);
 		throw Exception("Unpaired Left Bracket!");
 	}
 	Node* ret = operand_stack.top();
