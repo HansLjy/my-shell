@@ -1,0 +1,6 @@
+/CMakeFiles/
+/cmake-build-debug/
+/cmake_install.cmake
+/MyShell
+.idea/
+*.log
