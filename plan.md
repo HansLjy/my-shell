@@ -42,3 +42,10 @@ OrExpression := expression || expression
     * 编写文档
     * 实现 help test
 
+## Known Feature(bushi)
+
+1. 在执行 shell 命令的时候
+
+## Known Issues
+
+1. echo + & + 任何命令后会直接退出命令行

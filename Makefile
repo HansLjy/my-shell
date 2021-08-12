@@ -201,6 +201,30 @@ src/Command/commands.cc.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Command/commands.cc.s
 .PHONY : src/Command/commands.cc.s
 
+src/Exception/exceptions.o: src/Exception/exceptions.cc.o
+.PHONY : src/Exception/exceptions.o
+
+# target to build an object file
+src/Exception/exceptions.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Exception/exceptions.cc.o
+.PHONY : src/Exception/exceptions.cc.o
+
+src/Exception/exceptions.i: src/Exception/exceptions.cc.i
+.PHONY : src/Exception/exceptions.i
+
+# target to preprocess a source file
+src/Exception/exceptions.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Exception/exceptions.cc.i
+.PHONY : src/Exception/exceptions.cc.i
+
+src/Exception/exceptions.s: src/Exception/exceptions.cc.s
+.PHONY : src/Exception/exceptions.s
+
+# target to generate assembly for a file
+src/Exception/exceptions.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Exception/exceptions.cc.s
+.PHONY : src/Exception/exceptions.cc.s
+
 src/Parser/deliminator.o: src/Parser/deliminator.cc.o
 .PHONY : src/Parser/deliminator.o
 
@@ -315,6 +339,9 @@ help:
 	@echo "... src/Command/commands.o"
 	@echo "... src/Command/commands.i"
 	@echo "... src/Command/commands.s"
+	@echo "... src/Exception/exceptions.o"
+	@echo "... src/Exception/exceptions.i"
+	@echo "... src/Exception/exceptions.s"
 	@echo "... src/Parser/deliminator.o"
 	@echo "... src/Parser/deliminator.i"
 	@echo "... src/Parser/deliminator.s"

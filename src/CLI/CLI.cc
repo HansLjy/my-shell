@@ -8,7 +8,6 @@
 
 #include "CLI.h"
 #include "parser.h"
-#include "deliminator.h"
 
 CLI* CLI::theCLI = nullptr;
 
@@ -31,6 +30,7 @@ void CLI::Initialization() {
 }
 
 void CLI::Start() {
+	srand(time(NULL));
 	auto parser = Parser::Instance();
 	while (true) {
 		prompt = getlogin();	// 获取用户名
@@ -46,6 +46,7 @@ void CLI::Start() {
 		}
         auto res = parser->Parse(line);
 		res->Print(2);
+		res->Execute(true, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
 		delete res;
         free(line);
     }

@@ -4,3 +4,4 @@
 /MyShell
 .idea/
 *.log
+/CMakeCache.txt

@@ -7,7 +7,6 @@
 
 #include <vector>
 #include <string>
-#include "commands.h"
 
 typedef std::vector<std::string> Sentence;
 
@@ -17,13 +16,17 @@ enum NodeType {
 	kParaNode,	// 用 & 连起来的
 };
 
+enum ExeType {
+	kForeground,	// 前台执行
+	kBackground		// 后台执行
+};
+
 class NodeIterator;
 
 // 节点的基类
 class Node {
 public:
 	virtual void AppendChild(Node*);	// 添加子节点
-	virtual NodeIterator GetIterator();	// 取得迭代器
 
 	virtual Sentence GetSentence();						// 取得命令语句
 	virtual void SetSentence(const Sentence& sentence);	// 设置命令语句
@@ -31,7 +34,11 @@ public:
 	virtual int GetSize();			// 取得节点大小
 	virtual Node* GetNode(int id);	// 取得第 id 个节点
 
-	virtual void Print(int step);	// 打印节点，step 为前面的空格个数
+	virtual void Print(int step);			// 打印节点，step 为前面的空格个数
+
+	virtual int Execute(bool cont, int infile, int outfile, int errfile) = 0;	// 执行整棵树对应的指令
+
+	virtual ~Node() = default;
 
 	friend class NodeIterator;
 };
@@ -40,7 +47,7 @@ public:
 class CompositeNode : public Node {
 public:
 	virtual void AppendChild(Node* child);	// 添加子节点
-	virtual NodeIterator GetIterator();		// 取得迭代器
+	// 取得迭代器
 	virtual void PrintOperator() = 0;		// 打印运算符
 	virtual void Print(int step);			// 打印节点
 	~CompositeNode();
@@ -55,6 +62,7 @@ protected:
 class NullNode : public Node {
 public:
 	virtual void Print(int step);	// 打印节点
+	virtual int Execute(bool cont, int infile, int outfile, int errfile);			// 执行
 };
 
 // 叶子节点，只包含一条指令
@@ -63,6 +71,7 @@ public:
 	virtual Sentence GetSentence();						// 取得命令
 	virtual void SetSentence(const Sentence& sentence);	// 设置命令
 	virtual void Print(int step);						// 打印节点
+	virtual int Execute(bool cont, int infile, int outfile, int errfile);
 
 private:
 	Sentence _sentence;	// 命令语句
@@ -72,42 +81,14 @@ private:
 class PipedNode : public CompositeNode {
 public:
 	virtual void PrintOperator();
+	virtual int Execute(bool cont, int infile, int outfile, int errfile);
 };
 
 // 并行节点，用 & 连接的命令
 class ParaNode : public CompositeNode {
 public:
 	virtual void PrintOperator();
-};
-
-// 子节点迭代器
-class NodeIterator {
-public:
-	NodeIterator(Node* node);
-	virtual void First();
-	virtual void Next();
-	virtual bool IsDone();
-	virtual Node* CurNode();
-
-protected:
-	Node* _node;
-};
-
-class ForwardIterator : public NodeIterator {
-public:
-	ForwardIterator(Node* node);
-	virtual void First();
-	virtual void Next();
-	virtual bool IsDone();
-	virtual Node* CurNode();
-
-private:
-	int _id;
-};
-
-class NullIterator : public NodeIterator {
-public:
-	NullIterator (Node* node);
+	virtual int Execute(bool cont, int infile, int outfile, int errfile);
 };
 
 // 节点工厂
