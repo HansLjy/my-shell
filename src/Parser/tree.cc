@@ -209,12 +209,31 @@ int LeafNode::Execute(bool cont, int infile, int outfile, int errfile) {
 	command->Redirect(0, infile);
 	command->Redirect(1, outfile);
 	command->Redirect(2, errfile);
-	int ret = command->Execute(_sentence);
-	delete command;
-	if (cont) {
-		return ret;
+	if (Command::IsExternal(command)) {
+		// 如果是外部命令，则需要单独开一个进程来做
+		auto pid = fork();
+		if (pid == 0) {
+			// 在子进程中执行外部命令
+			command->Execute(_sentence);
+			exit(1);	// 如果能运行到这，中间一定出现了问题
+		} else {
+			waitpid(pid, nullptr, 0);	// 等待子进程结束
+			delete command;
+			if (cont) {
+				return 0;
+			} else {
+				exit(0);
+			}
+		}
 	} else {
-		exit(0);
+		// 如果是内部命令，只需要在当前的 shell 里面执行就好了
+		int ret = command->Execute(_sentence);
+		delete command;
+		if (cont) {
+			return ret;
+		} else {
+			exit(0);
+		}
 	}
 }
 

@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <cstdlib>
 #include "commands.h"
 #include "exceptions.h"
 
@@ -83,6 +84,15 @@ int Command::Execute(const Sentence &args) {
 	return ret;
 }
 
+bool Command::IsExternal(Command *cmd) {
+	if (dynamic_cast<CommandExternal*>(cmd) == nullptr) {
+		// 动态类型转换，当转换失败的时候说明不是外部命令
+		return false;
+	} else {
+		return true;
+	}
+}
+
 // 关闭所有重定向之后的文件
 void Command::CloseFiles() {
 	if (_in != STDIN_FILENO)
@@ -100,7 +110,7 @@ void write(int fd, const char* str) {
 
 // Tested
 int CommandCd::RealExecute(const Sentence &args) {
-	if (args.size() > 2) {
+	if (_argc > 2) {
 		// cd 的参数至多只能有一个
 		write(_err, "cd: too many arguments.\n");
 		return 1;
@@ -111,7 +121,7 @@ int CommandCd::RealExecute(const Sentence &args) {
 
 // Tested
 int CommandDir::RealExecute(const Sentence &args) {
-	if (args.size() > 2) {
+	if (_argc > 2) {
 		// dir 的参数至多只能有 1 个
 		write(_err, "dir: too many arguments.\n");
 		return 1;
@@ -133,8 +143,7 @@ int CommandDir::RealExecute(const Sentence &args) {
 
 // Tested
 int CommandEcho::RealExecute(const Sentence &args) {
-	int argc = args.size();
-	for (int i = 1; i < argc; i++) {
+	for (int i = 1; i < _argc; i++) {
 		write(_out, args[i].c_str());
 		write(_out, " ");
 	}
@@ -149,6 +158,10 @@ int CommandExit::RealExecute(const Sentence &args) {
 
 // Tested
 int CommandPwd::RealExecute(const Sentence &args) {
+	if (_argc > 1) {
+		write(_err, "pwd: too many arguments.\n");
+		return 1;
+	}
 	char* pwd = get_current_dir_name();
 	write(_out, pwd);
 	write(_out, "\n");
@@ -158,7 +171,7 @@ int CommandPwd::RealExecute(const Sentence &args) {
 // Tested
 int CommandTime::RealExecute(const Sentence &args) {
 	char buf[100];
-	if (args.size() > 1) {
+	if (_argc > 1) {
 		// Time 不能含有参数
 		write(_err, "time: too many arguments.\n");
 		return 1;
@@ -174,20 +187,47 @@ int CommandTime::RealExecute(const Sentence &args) {
 	return 0;
 }
 
-// TODO
+// Tested
+// 注意 CLion 自带的窗口由于是只读的所以会有问题
 int CommandClr::RealExecute(const Sentence &args) {
-	if (args.size() > 1) {
+	if (_argc > 1) {
 		// clr 不带参数
 		write(_err, "clr: too many arguments.\n");
 		return 1;
 	}
-	for (int i = 1; i < 100; i++)
-		write(_out, "\n");	// 直接输出若干空行
+	write(_out, "\x1b[H\x1b[2J");	// 输出清屏用的特殊字符串
 	return 0;
 }
 
+// Tested
+// 执行外部命令
 int CommandExternal::RealExecute(const Sentence &args) {
+	auto p_args = new char*[_argc + 1];	// 用来拷贝 execvp 的参数表
+	for (int i = 0; i < _argc; i++) {
+		// 将 args[i] 的内容拷贝到 p_args[i] 中
+		p_args[i] = new char[args[i].size() + 1];
+		strcpy(p_args[i], args[i].c_str());
+	}
+	p_args[_argc] = nullptr;
+	execvp(args[0].c_str(), p_args);
+	for (int i = 0; i < _argc; i++) {
+		delete [] p_args[i];
+	}
+	delete [] p_args;
 	return 0;
+}
+
+int CommandExec::RealExecute(const Sentence &args) {
+	if (_argc < 2) {
+		write(_err, "exec: too few arguments");
+		return 1;
+	}
+	auto command = CommandFactory::Instance()->GetCommand(args[1].c_str());
+	Sentence new_args;
+	for (int i = 1; i < args.size(); i++) {
+		new_args.push_back(args[i]);
+	}
+	exit(command->Execute(new_args));
 }
 
 CommandFactory* CommandFactory::theFactory = nullptr;
@@ -214,8 +254,9 @@ Command *CommandFactory::GetCommand(const std::string &name) {
 		return new CommandTime;
 	} else if (name == "clr") {
 		return new CommandClr;
+	} else if (name == "exec") {
+		return new CommandExec;
 	} else {
 		return new CommandExternal;
 	}
-	return nullptr;
 }

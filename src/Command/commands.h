@@ -15,9 +15,10 @@ public:
 	virtual int RealExecute(const Sentence& args) = 0;
 
 	virtual ~Command() = default;
+	static bool IsExternal(Command* cmd);	// 判断当前命令是不是外部命令
 protected:
 	void CloseFiles();
-	int _argc = 0;
+	int _argc = 0;						// 包括命令在内的参数个数
 	int _in = STDIN_FILENO,				// 默认标准输入
 		_out = STDOUT_FILENO,			// 默认标准输出
 		_err = STDERR_FILENO;			// 默认标准错误输出
@@ -54,6 +55,11 @@ public:
 };
 
 class CommandClr : public Command {
+public:
+	virtual int RealExecute(const Sentence& args);
+};
+
+class CommandExec : public Command {
 public:
 	virtual int RealExecute(const Sentence& args);
 };
