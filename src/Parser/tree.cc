@@ -160,30 +160,31 @@ int ParaNode::Execute(bool cont, int infile, int outfile, int errfile) {
 			}
 		}
 	}
-	auto pid = fork();
-	// 发起前台进程
-	if (pid == 0) {
-		if (is_background) {
-			// 如果父进程是后台进程组，将子进程加到父进程的进程组中
-			setpgid(pid, ppid);
-		} else {
-			// 如果父进程是前台进程，将子进程加到新的进程组中
-			setpgid(pid, pid);
-		}
-		exit(0);	// 完成之后退出
-	} else {
-		if (is_background) {
-			// 如果父进程是后台进程组，将子进程加到父进程的进程组中
-			setpgid(pid, ppid);
-			waitpid(pid, nullptr, 0);
-		} else {
-			// 如果父进程是前台进程，将子进程加到新的进程组中
-			setpgid(pid, pid);
-			tcsetpgrp(STDIN_FILENO, pid);			// 把控制权转让给子进程
-			waitpid(pid, nullptr, 0);	// 等待子进程完成
-			tcsetpgrp(STDIN_FILENO, getpid());		// 把控制转回到当前进程
-		}
-	}
+	_children[size - 1]->Execute(true, infile, outfile, errfile);
+//	auto pid = fork();
+//	// 发起前台进程
+//	if (pid == 0) {
+//		if (is_background) {
+//			// 如果父进程是后台进程组，将子进程加到父进程的进程组中
+//			setpgid(pid, ppid);
+//		} else {
+//			// 如果父进程是前台进程，将子进程加到新的进程组中
+//			setpgid(pid, pid);
+//		}
+//		exit(0);	// 完成之后退出
+//	} else {
+//		if (is_background) {
+//			// 如果父进程是后台进程组，将子进程加到父进程的进程组中
+//			setpgid(pid, ppid);
+//			waitpid(pid, nullptr, 0);
+//		} else {
+//			// 如果父进程是前台进程，将子进程加到新的进程组中
+//			setpgid(pid, pid);
+//			tcsetpgrp(STDIN_FILENO, pid);			// 把控制权转让给子进程
+//			waitpid(pid, nullptr, 0);	// 等待子进程完成
+//			tcsetpgrp(STDIN_FILENO, getpid());		// 把控制转回到当前进程
+//		}
+//	}
 	if (cont) {
 		return 0;
 	} else {

@@ -5,3 +5,4 @@
 .idea/
 *.log
 /CMakeCache.txt
+/MyShell.cbp

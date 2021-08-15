@@ -6,11 +6,13 @@
 #include <cstring>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <stdio.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <cstdlib>
 #include "commands.h"
 #include "exceptions.h"
+#include "global.h"
 
 // 判断是哪一个输入输出的重定向
 int WhichRedirect(const std::string& arg) {
@@ -81,6 +83,7 @@ int Command::Execute(const Sentence &args) {
 	}
 	int ret = RealExecute(args);
 	CloseFiles();
+	SpecialVarPool::Instance()->SetReturn(ret);
 	return ret;
 }
 
@@ -199,6 +202,167 @@ int CommandClr::RealExecute(const Sentence &args) {
 	return 0;
 }
 
+int CommandExec::RealExecute(const Sentence &args) {
+	if (_argc < 2) {
+		write(_err, "exec: too few arguments\n");
+		return 1;
+	}
+	auto command = CommandFactory::Instance()->GetCommand(args[1].c_str());
+	Sentence new_args;
+	for (int i = 1; i < _argc; i++) {
+		new_args.push_back(args[i]);
+	}
+	exit(command->Execute(new_args));
+}
+
+int CommandSet::RealExecute(const Sentence &args) {
+	if (_argc > 1) {
+		write(_err, "set: too many arguments\n");
+		return 1;
+	}
+	extern char** environ;	// 环境变量数组
+	for (int index = 0; environ[index] != nullptr; index++) {
+		// 逐个打印
+		write(_out, environ[index]);
+		write(_out, "\n");
+	}
+	return 0;
+}
+
+int CommandUnset::RealExecute(const Sentence &args) {
+	if (_argc < 2) {
+		write(_err, "unset: too few arguments\n");
+		return 1;
+	}
+	for (int i = 1; i < _argc; i++) {
+		unsetenv(args[i].c_str());
+	}
+	return 0;
+}
+
+int CommandShift::RealExecute(const Sentence &args) {
+	auto globals = SpecialVarPool::Instance();
+	if (args.size() > 2) {
+		write(_err, "shift: too many arguments\n");
+		globals->SetReturn(1);
+		return 1;
+	}
+	int shift = 1; // 默认参数为 1
+	if (args.size() == 2) {
+		shift = atoi(args[1].c_str());	// 不检查错误了
+	}
+	int success = globals->Shift(shift);
+	if (!success) {
+		write(_err, "shift: n should be in range [0, argc]\n");
+		return 1;
+	}
+	return 0;
+}
+
+// 判断是不是选项
+bool CommandTest::IsOption(const std::string &str) {
+	return str[0] == '-';
+}
+
+// 判断是哪一个参数
+// 我想下面的代码应该不需要注释了吧……
+typename CommandTest::Option CommandTest::WhichOption(const std::string &str) {
+	if (str == "-d")	return kDir;
+	if (str == "-f")	return kFile;
+	if (str == "-e")	return kExist;
+	if (str == "-eq")	return kEq;
+	if (str == "-ge")	return kGe;
+	if (str == "-gt")	return kGt;
+	if (str == "-le")	return kLe;
+	if (str == "-lt")	return kLt;
+	if (str == "-ne")	return kNe;
+	return kInvalid;
+}
+
+// 比较两个 int
+// 下面的代码就不需要注释了吧……
+int CommandTest::Compare(const Option &op, int lhs, int rhs) {
+	switch (op) {
+		case kEq:	return lhs == rhs;
+		case kGe:	return lhs >= rhs;
+		case kGt:	return lhs > rhs;
+		case kLe:	return lhs <= rhs;
+		case kLt:	return lhs < rhs;
+		case kNe:	return rhs != rhs;
+	}
+	return true;
+}
+
+// 检查是不是文件
+int CommandTest::CheckFile(const std::string &str) {
+	struct stat stat_buffer;					// 用来暂存 stat
+	stat(str.c_str(), &stat_buffer);			// 获得文件信息
+	return S_ISREG(stat_buffer.st_mode);	// 判断是不是文件
+}
+
+// 检查是不是目录
+int CommandTest::CheckDir(const std::string &str) {
+	struct stat stat_buffer;					// 用来暂存 stat
+	stat(str.c_str(), &stat_buffer);			// 获得文件信息
+	return S_ISDIR(stat_buffer.st_mode);	// 判断是不是目录
+}
+
+// 检查文件是否存在
+int CommandTest::CheckExist(const std::string &str) {
+	return access(str.c_str(), F_OK);	// 检查文件是否存在
+}
+
+/*
+ * Note：
+ * test 相对来说是所有命令里面最麻烦的了，原因是如果要实现
+ * 一模一样的功能几乎需要重新写一个 parser，并且这个 parser
+ * 几乎不能复用，所以这里就没这么做了，目前只实现了部分功能。
+ * 好在现在这个项目的可 * 扩展性还行，如果以后有空了或者开源
+ * 社区的老铁有兴趣的话可能会扩展 test 的功能吧。
+ */
+int CommandTest::RealExecute(const Sentence &args) {
+	if (_argc < 2) {
+		write(_err, "test: too few arguments\n");
+		return 1;
+	}
+	if (IsOption(args[1])) {
+		auto op = WhichOption(args[1]);
+		if (_argc != 3) {
+			// 此时只可能是 test -d file 这样的形式
+			write(_err, "test: too many or too few arguments\n");
+			return 1;
+		}
+		switch (op) {
+			case kDir: 		return !CheckDir(args[2]);
+			case kFile: 	return !CheckFile(args[2]);
+			case kExist:	return !CheckExist(args[2]);
+			default:
+				write(_err, "test: invalid option");
+				return 1;
+		}
+		// -d -f -e 三种情况
+	} else {
+		if (_argc != 4) {
+			write(_err, "test: too many or too few arguments\n");
+		}
+		auto op = WhichOption(args[2]);
+		int lhs = atoi(args[1].c_str());
+		int rhs = atoi(args[3].c_str());
+		switch (op) {
+			case kEq:
+			case kGe:
+			case kGt:
+			case kLe:
+			case kLt:
+			case kNe:
+				return !Compare(op, lhs, rhs);
+			default:
+				write(_err, "test: invalid option");
+				return 1;
+		}
+	}
+}
+
 // Tested
 // 执行外部命令
 int CommandExternal::RealExecute(const Sentence &args) {
@@ -215,19 +379,6 @@ int CommandExternal::RealExecute(const Sentence &args) {
 	}
 	delete [] p_args;
 	return 0;
-}
-
-int CommandExec::RealExecute(const Sentence &args) {
-	if (_argc < 2) {
-		write(_err, "exec: too few arguments");
-		return 1;
-	}
-	auto command = CommandFactory::Instance()->GetCommand(args[1].c_str());
-	Sentence new_args;
-	for (int i = 1; i < args.size(); i++) {
-		new_args.push_back(args[i]);
-	}
-	exit(command->Execute(new_args));
 }
 
 CommandFactory* CommandFactory::theFactory = nullptr;
@@ -256,6 +407,14 @@ Command *CommandFactory::GetCommand(const std::string &name) {
 		return new CommandClr;
 	} else if (name == "exec") {
 		return new CommandExec;
+	} else if (name == "set") {
+		return new CommandSet;
+	} else if (name == "unset") {
+		return new CommandUnset;
+	} else if (name == "shift") {
+		return new CommandShift;
+	} else if (name == "test") {
+		return new CommandTest;
 	} else {
 		return new CommandExternal;
 	}

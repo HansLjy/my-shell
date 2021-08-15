@@ -64,6 +64,47 @@ public:
 	virtual int RealExecute(const Sentence& args);
 };
 
+class CommandSet : public Command {
+public:
+	virtual int RealExecute(const Sentence& args);
+};
+
+class CommandUnset : public Command {
+public:
+	virtual int RealExecute(const Sentence& args);
+};
+
+class CommandShift : public Command {
+public:
+	virtual int RealExecute(const Sentence& args);
+};
+
+class CommandTest : public Command {
+public:
+	virtual int RealExecute(const Sentence& args);
+
+private:
+	enum Option {
+		kInvalid,	// Invalid options
+		kDir,		// -d
+		kFile,		// -f
+		kExist,		// -e
+		kEq,		// -eq
+		kGe,		// -ge
+		kGt,		// -gt
+		kLe,		// -le
+		kLt,		// -lt
+		kNe,		// -ne
+	};
+	bool IsOption(const std::string& str);
+	Option WhichOption(const std::string& str);
+
+	int CheckDir(const std::string& str);
+	int CheckFile(const std::string& str);
+	int CheckExist(const std::string& str);
+	int Compare(const Option& op, int lhs, int rhs);
+};
+
 class CommandExternal : public Command {
 public:
 	virtual int RealExecute(const Sentence& args);
