@@ -11,7 +11,8 @@ class CLI {
 public:
     static CLI* Instance();
     void Initialization();
-    void Start();
+
+	void Start();
 private:
     static CLI* theCLI;
     std::string prompt;

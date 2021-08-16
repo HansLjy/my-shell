@@ -7,10 +7,11 @@
 
 #include "tree.h"
 #include "commands.h"
+#include "jobpool.h"
 
 void Node::AppendChild(Node *) {}
 
-Sentence Node::GetSentence() {return Sentence();}	// 缺省为空
+std::string Node::GetSentence() {return "";}	// 缺省为空
 void Node::SetSentence(const Sentence &sentence) {}	//	 缺省为空
 int Node::GetSize() {return 0;}		// 缺省
 Node *Node::GetNode(int id) {return nullptr;}
@@ -28,6 +29,16 @@ void Node::Print(int step) {
 /*
  * 复合节点
  */
+
+std::string CompositeNode::GetSentence() {
+	std::string str("(" + _children[0]->GetSentence());
+	int size = _children.size();
+	for (int i = 1; i < size; i++) {
+		str += " " + GetOperator() + " " + _children[i]->GetSentence();
+	}
+	str += ")";
+	return str;
+}
 
 void CompositeNode::AppendChild(Node* child) {
 	_children.push_back(child);
@@ -61,6 +72,10 @@ CompositeNode::~CompositeNode() {
 
 void PipedNode::PrintOperator() {
 	fprintf(stdout, "\"|\"\n");
+}
+
+std::string PipedNode::GetOperator() {
+	return "|";
 }
 
 // 重定向还要重新搞
@@ -132,6 +147,10 @@ void ParaNode::PrintOperator() {
 	fprintf(stdout, "\"&\"\n");
 }
 
+std::string ParaNode::GetOperator() {
+	return "&";
+}
+
 int ParaNode::Execute(bool cont, int infile, int outfile, int errfile) {
 	int size = _children.size();
 	bool is_background = (tcgetpgrp(STDIN_FILENO) != getpgrp());	// 当前是不是前台进程
@@ -151,6 +170,12 @@ int ParaNode::Execute(bool cont, int infile, int outfile, int errfile) {
 			_children[i]->Execute(false, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
 			exit(0);	// 正常运行，返回 0
 		} else {
+			if (!is_background) {
+				// 如果父进程是个前台进程，就意味着需要进行作业控制
+				auto job_pool = JobPool::Instance();
+				job_pool->AddJob(pid, _children[i]->GetSentence());
+				// TODO
+			}
 			if (is_background) {
 				// 如果父进程是后台进程组，将子进程加到父进程的进程组中
 				setpgid(pid, ppid);
@@ -161,30 +186,6 @@ int ParaNode::Execute(bool cont, int infile, int outfile, int errfile) {
 		}
 	}
 	_children[size - 1]->Execute(true, infile, outfile, errfile);
-//	auto pid = fork();
-//	// 发起前台进程
-//	if (pid == 0) {
-//		if (is_background) {
-//			// 如果父进程是后台进程组，将子进程加到父进程的进程组中
-//			setpgid(pid, ppid);
-//		} else {
-//			// 如果父进程是前台进程，将子进程加到新的进程组中
-//			setpgid(pid, pid);
-//		}
-//		exit(0);	// 完成之后退出
-//	} else {
-//		if (is_background) {
-//			// 如果父进程是后台进程组，将子进程加到父进程的进程组中
-//			setpgid(pid, ppid);
-//			waitpid(pid, nullptr, 0);
-//		} else {
-//			// 如果父进程是前台进程，将子进程加到新的进程组中
-//			setpgid(pid, pid);
-//			tcsetpgrp(STDIN_FILENO, pid);			// 把控制权转让给子进程
-//			waitpid(pid, nullptr, 0);	// 等待子进程完成
-//			tcsetpgrp(STDIN_FILENO, getpid());		// 把控制转回到当前进程
-//		}
-//	}
 	if (cont) {
 		return 0;
 	} else {
@@ -196,8 +197,14 @@ int ParaNode::Execute(bool cont, int infile, int outfile, int errfile) {
  * 叶子节点
  */
 
-Sentence LeafNode::GetSentence() {
-	return _sentence;
+std::string LeafNode::GetSentence() {
+	std::string str(_sentence[0]);
+	int size = _sentence.size();
+	for (int i = 1; i < size; i++) {
+		// 逐步拼合命令
+		str += " " + _sentence[i];
+	}
+	return str;
 }
 
 void LeafNode::SetSentence(const Sentence &sentence) {
@@ -210,8 +217,9 @@ int LeafNode::Execute(bool cont, int infile, int outfile, int errfile) {
 	command->Redirect(0, infile);
 	command->Redirect(1, outfile);
 	command->Redirect(2, errfile);
-	if (Command::IsExternal(command)) {
-		// 如果是外部命令，则需要单独开一个进程来做
+	bool is_background = (tcgetpgrp(STDIN_FILENO) != getpgrp());	// 当前是不是前台进程
+	if (Command::IsExternal(command) && !is_background) {
+		// 如果是外部命令，并且是前台进程。则需要单独开一个进程来做
 		auto pid = fork();
 		if (pid == 0) {
 			// 在子进程中执行外部命令
@@ -227,7 +235,7 @@ int LeafNode::Execute(bool cont, int infile, int outfile, int errfile) {
 			}
 		}
 	} else {
-		// 如果是内部命令，只需要在当前的 shell 里面执行就好了
+		// 如果是内部命令，或者是后台进程，只需要在当前的进程里面执行就好了
 		int ret = command->Execute(_sentence);
 		delete command;
 		if (cont) {

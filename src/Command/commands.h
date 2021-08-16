@@ -18,10 +18,13 @@ public:
 	static bool IsExternal(Command* cmd);	// 判断当前命令是不是外部命令
 protected:
 	void CloseFiles();
+	void CopyFiles();					// 保存原来的输入输出文件
+	void RecoverFiles();				// 恢复原来的输入输出文件
 	int _argc = 0;						// 包括命令在内的参数个数
 	int _in = STDIN_FILENO,				// 默认标准输入
 		_out = STDOUT_FILENO,			// 默认标准输出
 		_err = STDERR_FILENO;			// 默认标准错误输出
+	int _stdin, _stdout, _stderr;		// 标准输入输出文件的拷贝
 };
 
 class CommandCd : public Command {
@@ -105,7 +108,23 @@ private:
 	int Compare(const Option& op, int lhs, int rhs);
 };
 
+class CommandUmask : public Command {
+public:
+	virtual int RealExecute(const Sentence& args);
+
+};
+
 class CommandExternal : public Command {
+public:
+	virtual int RealExecute(const Sentence& args);
+};
+
+class CommandJobs : public Command {
+public:
+	virtual int RealExecute(const Sentence& args);
+};
+
+class CommandFg : public Command {
 public:
 	virtual int RealExecute(const Sentence& args);
 };

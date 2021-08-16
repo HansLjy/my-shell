@@ -35,6 +35,10 @@ void SpecialVarPool::SetReturn(int ret) {
 	_ret = ret;
 }
 
+int SpecialVarPool::GetReturn() {
+	return _ret;
+}
+
 bool SpecialVarPool::Shift(int n) {
 	int argc = _args.size();
 	if (n < 0 || n >= argc - 1) {

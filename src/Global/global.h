@@ -22,12 +22,13 @@ public:
 	std::string GetArg(int idx);					// 获取参数变量的值（超过限制返回空串）
 	int GetArgc();									// 获取参数个数
 	void SetReturn(int ret);						// 设置程序的返回值
+	int GetReturn();								// 获取程序的返回值
 	bool Shift(int n);								// 移动参数的值
 	void Clear();									// 清空参数表
 
 private:
 	std::vector<std::string> _args;		// 环境变量 $i
-	int _ret;							// 返回值
+	int _ret = 0;						// 返回值
 	static SpecialVarPool* thePool;
 };
 

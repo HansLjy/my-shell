@@ -65,16 +65,6 @@ CMAKE_BINARY_DIR = /home/hansljy/Program/MyShell
 #=============================================================================
 # Targets provided globally by CMake.
 
-# Special rule for the target rebuild_cache
-rebuild_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
-	/opt/clion/bin/cmake/linux/bin/cmake --regenerate-during-build -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
-.PHONY : rebuild_cache
-
-# Special rule for the target rebuild_cache
-rebuild_cache/fast: rebuild_cache
-.PHONY : rebuild_cache/fast
-
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
@@ -84,6 +74,16 @@ edit_cache:
 # Special rule for the target edit_cache
 edit_cache/fast: edit_cache
 .PHONY : edit_cache/fast
+
+# Special rule for the target rebuild_cache
+rebuild_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
+	/opt/clion/bin/cmake/linux/bin/cmake --regenerate-during-build -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+.PHONY : rebuild_cache
+
+# Special rule for the target rebuild_cache
+rebuild_cache/fast: rebuild_cache
+.PHONY : rebuild_cache/fast
 
 # The main all target
 all: cmake_check_build_system
@@ -117,24 +117,48 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named main.cc
+# Target rules for targets named MyShell
 
 # Build rule for target.
-main.cc: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 main.cc
-.PHONY : main.cc
+MyShell: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 MyShell
+.PHONY : MyShell
 
 # fast build rule for target.
-main.cc/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/build
-.PHONY : main.cc/fast
+MyShell/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/build
+.PHONY : MyShell/fast
+
+main.o: main.cc.o
+.PHONY : main.o
+
+# target to build an object file
+main.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/main.cc.o
+.PHONY : main.cc.o
+
+main.i: main.cc.i
+.PHONY : main.i
+
+# target to preprocess a source file
+main.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/main.cc.i
+.PHONY : main.cc.i
+
+main.s: main.cc.s
+.PHONY : main.s
+
+# target to generate assembly for a file
+main.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/main.cc.s
+.PHONY : main.cc.s
 
 src/CLI/CLI.o: src/CLI/CLI.cc.o
 .PHONY : src/CLI/CLI.o
 
 # target to build an object file
 src/CLI/CLI.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/CLI/CLI.cc.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/CLI/CLI.cc.o
 .PHONY : src/CLI/CLI.cc.o
 
 src/CLI/CLI.i: src/CLI/CLI.cc.i
@@ -142,7 +166,7 @@ src/CLI/CLI.i: src/CLI/CLI.cc.i
 
 # target to preprocess a source file
 src/CLI/CLI.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/CLI/CLI.cc.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/CLI/CLI.cc.i
 .PHONY : src/CLI/CLI.cc.i
 
 src/CLI/CLI.s: src/CLI/CLI.cc.s
@@ -150,7 +174,7 @@ src/CLI/CLI.s: src/CLI/CLI.cc.s
 
 # target to generate assembly for a file
 src/CLI/CLI.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/CLI/CLI.cc.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/CLI/CLI.cc.s
 .PHONY : src/CLI/CLI.cc.s
 
 src/Command/commands.o: src/Command/commands.cc.o
@@ -158,7 +182,7 @@ src/Command/commands.o: src/Command/commands.cc.o
 
 # target to build an object file
 src/Command/commands.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Command/commands.cc.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Command/commands.cc.o
 .PHONY : src/Command/commands.cc.o
 
 src/Command/commands.i: src/Command/commands.cc.i
@@ -166,7 +190,7 @@ src/Command/commands.i: src/Command/commands.cc.i
 
 # target to preprocess a source file
 src/Command/commands.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Command/commands.cc.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Command/commands.cc.i
 .PHONY : src/Command/commands.cc.i
 
 src/Command/commands.s: src/Command/commands.cc.s
@@ -174,7 +198,7 @@ src/Command/commands.s: src/Command/commands.cc.s
 
 # target to generate assembly for a file
 src/Command/commands.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Command/commands.cc.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Command/commands.cc.s
 .PHONY : src/Command/commands.cc.s
 
 src/Exception/exceptions.o: src/Exception/exceptions.cc.o
@@ -182,7 +206,7 @@ src/Exception/exceptions.o: src/Exception/exceptions.cc.o
 
 # target to build an object file
 src/Exception/exceptions.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Exception/exceptions.cc.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Exception/exceptions.cc.o
 .PHONY : src/Exception/exceptions.cc.o
 
 src/Exception/exceptions.i: src/Exception/exceptions.cc.i
@@ -190,7 +214,7 @@ src/Exception/exceptions.i: src/Exception/exceptions.cc.i
 
 # target to preprocess a source file
 src/Exception/exceptions.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Exception/exceptions.cc.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Exception/exceptions.cc.i
 .PHONY : src/Exception/exceptions.cc.i
 
 src/Exception/exceptions.s: src/Exception/exceptions.cc.s
@@ -198,7 +222,7 @@ src/Exception/exceptions.s: src/Exception/exceptions.cc.s
 
 # target to generate assembly for a file
 src/Exception/exceptions.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Exception/exceptions.cc.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Exception/exceptions.cc.s
 .PHONY : src/Exception/exceptions.cc.s
 
 src/Global/global.o: src/Global/global.cc.o
@@ -206,7 +230,7 @@ src/Global/global.o: src/Global/global.cc.o
 
 # target to build an object file
 src/Global/global.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Global/global.cc.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Global/global.cc.o
 .PHONY : src/Global/global.cc.o
 
 src/Global/global.i: src/Global/global.cc.i
@@ -214,7 +238,7 @@ src/Global/global.i: src/Global/global.cc.i
 
 # target to preprocess a source file
 src/Global/global.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Global/global.cc.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Global/global.cc.i
 .PHONY : src/Global/global.cc.i
 
 src/Global/global.s: src/Global/global.cc.s
@@ -222,7 +246,7 @@ src/Global/global.s: src/Global/global.cc.s
 
 # target to generate assembly for a file
 src/Global/global.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Global/global.cc.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Global/global.cc.s
 .PHONY : src/Global/global.cc.s
 
 src/Job/jobpool.o: src/Job/jobpool.cc.o
@@ -230,7 +254,7 @@ src/Job/jobpool.o: src/Job/jobpool.cc.o
 
 # target to build an object file
 src/Job/jobpool.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Job/jobpool.cc.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Job/jobpool.cc.o
 .PHONY : src/Job/jobpool.cc.o
 
 src/Job/jobpool.i: src/Job/jobpool.cc.i
@@ -238,7 +262,7 @@ src/Job/jobpool.i: src/Job/jobpool.cc.i
 
 # target to preprocess a source file
 src/Job/jobpool.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Job/jobpool.cc.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Job/jobpool.cc.i
 .PHONY : src/Job/jobpool.cc.i
 
 src/Job/jobpool.s: src/Job/jobpool.cc.s
@@ -246,7 +270,7 @@ src/Job/jobpool.s: src/Job/jobpool.cc.s
 
 # target to generate assembly for a file
 src/Job/jobpool.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Job/jobpool.cc.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Job/jobpool.cc.s
 .PHONY : src/Job/jobpool.cc.s
 
 src/Parser/deliminator.o: src/Parser/deliminator.cc.o
@@ -254,7 +278,7 @@ src/Parser/deliminator.o: src/Parser/deliminator.cc.o
 
 # target to build an object file
 src/Parser/deliminator.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Parser/deliminator.cc.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/deliminator.cc.o
 .PHONY : src/Parser/deliminator.cc.o
 
 src/Parser/deliminator.i: src/Parser/deliminator.cc.i
@@ -262,7 +286,7 @@ src/Parser/deliminator.i: src/Parser/deliminator.cc.i
 
 # target to preprocess a source file
 src/Parser/deliminator.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Parser/deliminator.cc.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/deliminator.cc.i
 .PHONY : src/Parser/deliminator.cc.i
 
 src/Parser/deliminator.s: src/Parser/deliminator.cc.s
@@ -270,7 +294,7 @@ src/Parser/deliminator.s: src/Parser/deliminator.cc.s
 
 # target to generate assembly for a file
 src/Parser/deliminator.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Parser/deliminator.cc.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/deliminator.cc.s
 .PHONY : src/Parser/deliminator.cc.s
 
 src/Parser/parser.o: src/Parser/parser.cc.o
@@ -278,7 +302,7 @@ src/Parser/parser.o: src/Parser/parser.cc.o
 
 # target to build an object file
 src/Parser/parser.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Parser/parser.cc.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/parser.cc.o
 .PHONY : src/Parser/parser.cc.o
 
 src/Parser/parser.i: src/Parser/parser.cc.i
@@ -286,7 +310,7 @@ src/Parser/parser.i: src/Parser/parser.cc.i
 
 # target to preprocess a source file
 src/Parser/parser.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Parser/parser.cc.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/parser.cc.i
 .PHONY : src/Parser/parser.cc.i
 
 src/Parser/parser.s: src/Parser/parser.cc.s
@@ -294,7 +318,7 @@ src/Parser/parser.s: src/Parser/parser.cc.s
 
 # target to generate assembly for a file
 src/Parser/parser.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Parser/parser.cc.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/parser.cc.s
 .PHONY : src/Parser/parser.cc.s
 
 src/Parser/toolbox.o: src/Parser/toolbox.cc.o
@@ -302,7 +326,7 @@ src/Parser/toolbox.o: src/Parser/toolbox.cc.o
 
 # target to build an object file
 src/Parser/toolbox.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Parser/toolbox.cc.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/toolbox.cc.o
 .PHONY : src/Parser/toolbox.cc.o
 
 src/Parser/toolbox.i: src/Parser/toolbox.cc.i
@@ -310,7 +334,7 @@ src/Parser/toolbox.i: src/Parser/toolbox.cc.i
 
 # target to preprocess a source file
 src/Parser/toolbox.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Parser/toolbox.cc.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/toolbox.cc.i
 .PHONY : src/Parser/toolbox.cc.i
 
 src/Parser/toolbox.s: src/Parser/toolbox.cc.s
@@ -318,7 +342,7 @@ src/Parser/toolbox.s: src/Parser/toolbox.cc.s
 
 # target to generate assembly for a file
 src/Parser/toolbox.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Parser/toolbox.cc.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/toolbox.cc.s
 .PHONY : src/Parser/toolbox.cc.s
 
 src/Parser/tree.o: src/Parser/tree.cc.o
@@ -326,7 +350,7 @@ src/Parser/tree.o: src/Parser/tree.cc.o
 
 # target to build an object file
 src/Parser/tree.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Parser/tree.cc.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/tree.cc.o
 .PHONY : src/Parser/tree.cc.o
 
 src/Parser/tree.i: src/Parser/tree.cc.i
@@ -334,7 +358,7 @@ src/Parser/tree.i: src/Parser/tree.cc.i
 
 # target to preprocess a source file
 src/Parser/tree.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Parser/tree.cc.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/tree.cc.i
 .PHONY : src/Parser/tree.cc.i
 
 src/Parser/tree.s: src/Parser/tree.cc.s
@@ -342,7 +366,7 @@ src/Parser/tree.s: src/Parser/tree.cc.s
 
 # target to generate assembly for a file
 src/Parser/tree.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.cc.dir/build.make CMakeFiles/main.cc.dir/src/Parser/tree.cc.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/tree.cc.s
 .PHONY : src/Parser/tree.cc.s
 
 # Help Target
@@ -353,7 +377,10 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... main.cc"
+	@echo "... MyShell"
+	@echo "... main.o"
+	@echo "... main.i"
+	@echo "... main.s"
 	@echo "... src/CLI/CLI.o"
 	@echo "... src/CLI/CLI.i"
 	@echo "... src/CLI/CLI.s"

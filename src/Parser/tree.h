@@ -28,7 +28,7 @@ class Node {
 public:
 	virtual void AppendChild(Node*);	// 添加子节点
 
-	virtual Sentence GetSentence();						// 取得命令语句
+	virtual std::string GetSentence();					// 取得命令语句
 	virtual void SetSentence(const Sentence& sentence);	// 设置命令语句
 
 	virtual int GetSize();			// 取得节点大小
@@ -46,9 +46,11 @@ public:
 // 复合节点，即 Internal Node
 class CompositeNode : public Node {
 public:
+	virtual std::string GetSentence();		// 取得命令语句
 	virtual void AppendChild(Node* child);	// 添加子节点
 	// 取得迭代器
 	virtual void PrintOperator() = 0;		// 打印运算符
+	virtual std::string GetOperator() = 0;	// 获得运算符
 	virtual void Print(int step);			// 打印节点
 	~CompositeNode();
 
@@ -68,7 +70,7 @@ public:
 // 叶子节点，只包含一条指令
 class LeafNode : public Node {
 public:
-	virtual Sentence GetSentence();						// 取得命令
+	virtual std::string GetSentence();					// 取得命令
 	virtual void SetSentence(const Sentence& sentence);	// 设置命令
 	virtual void Print(int step);						// 打印节点
 	virtual int Execute(bool cont, int infile, int outfile, int errfile);
@@ -81,12 +83,14 @@ private:
 class PipedNode : public CompositeNode {
 public:
 	virtual void PrintOperator();
+	virtual std::string GetOperator();
 	virtual int Execute(bool cont, int infile, int outfile, int errfile);
 };
 
 // 并行节点，用 & 连接的命令
 class ParaNode : public CompositeNode {
 public:
+	virtual std::string GetOperator();
 	virtual void PrintOperator();
 	virtual int Execute(bool cont, int infile, int outfile, int errfile);
 };

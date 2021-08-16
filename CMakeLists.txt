@@ -17,4 +17,4 @@ aux_source_directory(src/Parser PARSER)
 aux_source_directory(src/Exception EXCEPTION)
 aux_source_directory(src/Global GLOBAL)
 
-add_executable(main.cc ${CLI} ${COMMAND} ${JOB} ${PARSER} ${EXCEPTION} ${GLOBAL})
+add_executable(MyShell main.cc ${CLI} ${COMMAND} ${JOB} ${PARSER} ${EXCEPTION} ${GLOBAL})
