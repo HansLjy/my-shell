@@ -461,9 +461,28 @@ int CommandFg::RealExecute(const Sentence &args) {
 		auto job_pool = JobPool::Instance();
 		pid_t pid = job_pool->GetPID(id);
 		tcsetpgrp(STDIN_FILENO, pid);
+		kill(-pid, SIGCONT);
 		waitpid(pid, nullptr, 0);
 		printf("%d\n", getpgrp());
 		tcsetpgrp(STDIN_FILENO, getpgrp());
+	}
+	return 0;
+}
+
+int CommandBg::RealExecute(const Sentence &args) {
+	bool is_foreground = tcgetpgrp(_stdin) == getpgrp();	// 是不是前端运行
+	bool is_interactive = isatty(STDIN_FILENO);				// 是不是交互式 shell
+	if (is_foreground && is_interactive) {
+		// 只有当前端运行且是交互式 shell 的时候才会执行 bg 命令
+		if (_argc != 2) {
+			fprintf(stderr, "bg: too many or too few arguments\n");
+			return 1;
+		}
+		int id = strtoul(args[1].c_str(), nullptr, 10);
+		auto job_pool = JobPool::Instance();
+		pid_t pid = job_pool->GetPID(id);
+		// 恢复执行
+		kill(-pid, SIGCONT);
 	}
 	return 0;
 }
@@ -493,5 +512,6 @@ Command *CommandFactory::GetCommand(const std::string &name) {
 	if (name == "umask") return new CommandUmask;
 	if (name == "jobs") return new CommandJobs;
 	if (name == "fg") return new CommandFg;
+	if (name == "bg") return new CommandBg;
 	return new CommandExternal;
 }

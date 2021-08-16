@@ -153,39 +153,36 @@ std::string ParaNode::GetOperator() {
 
 int ParaNode::Execute(bool cont, int infile, int outfile, int errfile) {
 	int size = _children.size();
-	bool is_background = (tcgetpgrp(STDIN_FILENO) != getpgrp());	// 当前是不是前台进程
-	auto ppid = getpid();	// 父进程的 pid
+	bool need_control = (tcgetpgrp(STDIN_FILENO) == getpgrp() && isatty(STDIN_FILENO));
 	for (int i = 0; i < size - 1; i++) {
 		auto pid = fork();
 		if (pid == 0) {
-			pid = getpid();	// 子进程的 pid
-			if (is_background) {
-				// 如果父进程是后台进程组，将子进程加到父进程的进程组中
-				setpgid(pid, ppid);
-			} else {
-				// 如果父进程是前台进程，将子进程加到新的进程组中
-				setpgid(pid, pid);
+			if (need_control) {
+				// 如果需要作业控制
+				pid = getpid();			// 子进程的 pid
+				setpgid(pid, pid);		// 将子进程加到单独的一个进程组中
+				signal (SIGINT, SIG_DFL);
+				signal (SIGTSTP, STGHandler);
+				signal (SIGQUIT, SIG_DFL);
+				signal (SIGTTIN, SIG_DFL);
+				signal (SIGTTOU, SIG_DFL);
+				signal (SIGCHLD, SIG_DFL);
 			}
 			// 执行子进程
 			_children[i]->Execute(false, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
 			exit(0);	// 正常运行，返回 0
 		} else {
-			if (!is_background) {
-				// 如果父进程是个前台进程，就意味着需要进行作业控制
+			if (need_control) {
+				setpgid(pid, pid);		// 将子进程加到单独的一个进程组中
 				auto job_pool = JobPool::Instance();
 				job_pool->AddJob(pid, _children[i]->GetSentence());
-				// TODO
-			}
-			if (is_background) {
-				// 如果父进程是后台进程组，将子进程加到父进程的进程组中
-				setpgid(pid, ppid);
-			} else {
-				// 如果父进程是前台进程，将子进程加到新的进程组中
-				setpgid(pid, pid);
 			}
 		}
 	}
 	_children[size - 1]->Execute(true, infile, outfile, errfile);
+	if (!need_control) {
+		while (wait(nullptr) > 0); // 等待所有子进程结束
+	}
 	if (cont) {
 		return 0;
 	} else {
@@ -217,16 +214,32 @@ int LeafNode::Execute(bool cont, int infile, int outfile, int errfile) {
 	command->Redirect(0, infile);
 	command->Redirect(1, outfile);
 	command->Redirect(2, errfile);
-	bool is_background = (tcgetpgrp(STDIN_FILENO) != getpgrp());	// 当前是不是前台进程
-	if (Command::IsExternal(command) && !is_background) {
+	bool need_control = (tcgetpgrp(STDIN_FILENO) == getpgrp() && isatty(STDIN_FILENO));
+	if (Command::IsExternal(command) && need_control) {
 		// 如果是外部命令，并且是前台进程。则需要单独开一个进程来做
 		auto pid = fork();
 		if (pid == 0) {
 			// 在子进程中执行外部命令
+			pid = getpid();
+			setpgid(pid, pid);
+			signal (SIGINT, SIG_DFL);
+			signal (SIGTSTP, SIG_DFL);
+			signal (SIGQUIT, SIG_DFL);
+			signal (SIGTTIN, SIG_DFL);
+			signal (SIGTTOU, SIG_DFL);
+			signal (SIGCHLD, SIG_DFL);
+			tcsetpgrp(STDIN_FILENO, pid);
+
 			command->Execute(_sentence);
+			fprintf(stderr, "Invalid command: %s\n", _sentence[0].c_str());
 			exit(1);	// 如果能运行到这，中间一定出现了问题
 		} else {
+			setpgid(pid, pid);
+			tcsetpgrp(STDIN_FILENO, pid);
+			fprintf(stderr, "Start waiting.");
 			waitpid(pid, nullptr, 0);	// 等待子进程结束
+			fprintf(stderr, "End waiting.");
+			tcsetpgrp(STDIN_FILENO, getpid());
 			delete command;
 			if (cont) {
 				return 0;

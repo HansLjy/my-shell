@@ -50,15 +50,12 @@ void CLI::Start() {
 		fprintf(stdout, "%s$", prompt.c_str());
 		getline(&line, &len, stdin);
 		line[strlen(line) - 1] = '\0';	// 替换掉行末的空格
-		if (*line == '\0') {
-			break;
-		}
         auto res = parser->Parse(line);
-		res->Execute(true, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
+        res->Execute(true, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
 		delete res;
         free(line);
 
-//        auto job_pool = JobPool::Instance();
-//        job_pool->PrintJobs();
+        auto job_pool = JobPool::Instance();
+        job_pool->PrintFinished();
     }
 }
