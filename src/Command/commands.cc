@@ -15,6 +15,7 @@
 #include "exceptions.h"
 #include "global.h"
 #include "jobpool.h"
+#include "help.h"
 
 // 判断是哪一个输入输出的重定向
 int WhichRedirect(const std::string& arg) {
@@ -487,6 +488,20 @@ int CommandBg::RealExecute(const Sentence &args) {
 	return 0;
 }
 
+int CommandHelp::RealExecute(const Sentence &args) {
+	if (_argc > 2) {
+		fprintf(stderr, "help: too many arguments");
+		return 1;
+	}
+	auto helper = Helper::Instance();
+	if (_argc == 1) {
+		helper->PrintAll();
+	} else {
+		helper->PrintHelp(args[1]);
+	}
+	return 0;
+}
+
 CommandFactory* CommandFactory::theFactory = nullptr;
 
 CommandFactory *CommandFactory::Instance() {
@@ -513,5 +528,6 @@ Command *CommandFactory::GetCommand(const std::string &name) {
 	if (name == "jobs") return new CommandJobs;
 	if (name == "fg") return new CommandFg;
 	if (name == "bg") return new CommandBg;
+	if (name == "help") return new CommandHelp;
 	return new CommandExternal;
 }

@@ -134,6 +134,11 @@ public:
 	virtual int RealExecute(const Sentence& args);
 };
 
+class CommandHelp : public Command {
+public:
+	virtual int RealExecute(const Sentence& args);
+};
+
 class CommandFactory {
 public:
 	static CommandFactory* Instance();

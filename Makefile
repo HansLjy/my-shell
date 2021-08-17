@@ -201,6 +201,30 @@ src/Command/commands.cc.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Command/commands.cc.s
 .PHONY : src/Command/commands.cc.s
 
+src/Command/help.o: src/Command/help.cc.o
+.PHONY : src/Command/help.o
+
+# target to build an object file
+src/Command/help.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Command/help.cc.o
+.PHONY : src/Command/help.cc.o
+
+src/Command/help.i: src/Command/help.cc.i
+.PHONY : src/Command/help.i
+
+# target to preprocess a source file
+src/Command/help.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Command/help.cc.i
+.PHONY : src/Command/help.cc.i
+
+src/Command/help.s: src/Command/help.cc.s
+.PHONY : src/Command/help.s
+
+# target to generate assembly for a file
+src/Command/help.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Command/help.cc.s
+.PHONY : src/Command/help.cc.s
+
 src/Exception/exceptions.o: src/Exception/exceptions.cc.o
 .PHONY : src/Exception/exceptions.o
 
@@ -387,6 +411,9 @@ help:
 	@echo "... src/Command/commands.o"
 	@echo "... src/Command/commands.i"
 	@echo "... src/Command/commands.s"
+	@echo "... src/Command/help.o"
+	@echo "... src/Command/help.i"
+	@echo "... src/Command/help.s"
 	@echo "... src/Exception/exceptions.o"
 	@echo "... src/Exception/exceptions.i"
 	@echo "... src/Exception/exceptions.s"
