@@ -24,10 +24,19 @@ CLI *CLI::Instance() {
 void CLI::Initialization() {
 	auto parser = Parser::Instance();
 	parser->AddOperator(Operator{
-		Token("|"), 1, kPipedNode
+		Token("&&"), 1, kAndNode
 	});
 	parser->AddOperator(Operator{
-		Token ("&"), 2, kParaNode
+		Token("||"), 2, kOrNode
+	});
+	parser->AddOperator(Operator{
+		Token("|"), 3, kPipedNode
+	});
+	parser->AddOperator(Operator{
+		Token ("&"), 4, kParaNode
+	});
+	parser->AddOperator(Operator{
+		Token(";"), 5, kSeqNode
 	});
 }
 

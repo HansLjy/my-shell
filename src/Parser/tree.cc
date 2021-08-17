@@ -8,6 +8,7 @@
 #include "tree.h"
 #include "commands.h"
 #include "jobpool.h"
+#include "global.h"
 
 void Node::AppendChild(Node *) {}
 
@@ -46,7 +47,8 @@ void CompositeNode::AppendChild(Node* child) {
 
 void CompositeNode::Print(int step) {
 	Node::Print(step);
-	PrintOperator();
+	std::string op = GetOperator();
+	printf("%s\n", op.c_str());
 	for (const auto& child : _children) {
 		child->Print(step + 2);
 	}
@@ -66,92 +68,8 @@ CompositeNode::~CompositeNode() {
 	}
 }
 
-/*
- * 管道节点
- */
-
-void PipedNode::PrintOperator() {
-	fprintf(stdout, "\"|\"\n");
-}
-
-std::string PipedNode::GetOperator() {
-	return "|";
-}
-
-// 重定向还要重新搞
-int PipedNode::Execute(bool cont, int infile, int outfile, int errfile) {
-	int size = _children.size();
-	bool is_background = (tcgetpgrp(STDIN_FILENO) != getpgrp());	// 当前是不是前台进程
-	auto ppid = getpid();	// 父进程的 pid
-	for (int i = 0; i < size - 1; i++) {
-		auto pid = fork();
-		if (pid == 0) {
-			pid = getpid();	// 子进程的 pid
-			if (is_background) {
-				// 如果父进程是后台进程组，将子进程加到父进程的进程组中
-				setpgid(pid, ppid);
-			} else {
-				// 如果父进程是前台进程，将子进程加到新的进程组中
-				setpgid(pid, pid);
-			}
-			// 执行子进程
-			_children[i]->Execute(false, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
-			exit(0);	// 正常运行，返回 0
-		} else {
-			if (is_background) {
-				// 如果父进程是后台进程组，将子进程加到父进程的进程组中
-				setpgid(pid, ppid);
-			} else {
-				// 如果父进程是前台进程，将子进程加到新的进程组中
-				setpgid(pid, pid);
-			}
-		}
-	}
-	auto pid = fork();
-	// 发起前台进程
-	if (pid == 0) {
-		if (is_background) {
-			// 如果父进程是后台进程组，将子进程加到父进程的进程组中
-			setpgid(pid, ppid);
-		} else {
-			// 如果父进程是前台进程，将子进程加到新的进程组中
-			setpgid(pid, pid);
-		}
-		_children[size - 1]->Execute(false, infile, outfile, errfile);
-		exit(0);	// 完成之后退出
-	} else {
-		if (is_background) {
-			// 如果父进程是后台进程组，将子进程加到父进程的进程组中
-			setpgid(pid, ppid);
-			waitpid(pid, nullptr, 0);
-		} else {
-			// 如果父进程是前台进程，将子进程加到新的进程组中
-			setpgid(pid, pid);
-			tcsetpgrp(STDIN_FILENO, pid);			// 把控制权转让给子进程
-			waitpid(pid, nullptr, 0);	// 等待子进程完成
-			tcsetpgrp(STDIN_FILENO, getpid());		// 把控制转回到当前进程
-		}
-	}
-	if (cont) {
-		return 0;
-	} else {
-		exit(0);
-	}
-}
-
-/*
- * 并行节点
- */
-
-void ParaNode::PrintOperator() {
-	fprintf(stdout, "\"&\"\n");
-}
-
-std::string ParaNode::GetOperator() {
-	return "&";
-}
-
-int ParaNode::Execute(bool cont, int infile, int outfile, int errfile) {
+// 管道节点
+void PipedNode::Execute(bool cont, int infile, int outfile, int errfile) {
 	int size = _children.size();
 	bool need_control = (tcgetpgrp(STDIN_FILENO) == getpgrp() && isatty(STDIN_FILENO));
 	for (int i = 0; i < size - 1; i++) {
@@ -184,16 +102,129 @@ int ParaNode::Execute(bool cont, int infile, int outfile, int errfile) {
 		while (wait(nullptr) > 0); // 等待所有子进程结束
 	}
 	if (cont) {
-		return 0;
+		return;
 	} else {
 		exit(0);
 	}
 }
 
-/*
- * 叶子节点
- */
+std::string PipedNode::GetOperator() {
+	return "|";
+}
 
+// 并行节点
+void ParaNode::Execute(bool cont, int infile, int outfile, int errfile) {
+	int size = _children.size();
+	bool need_control = (tcgetpgrp(STDIN_FILENO) == getpgrp() && isatty(STDIN_FILENO));
+	for (int i = 0; i < size - 1; i++) {
+		auto pid = fork();
+		if (pid == 0) {
+			if (need_control) {
+				// 如果需要作业控制
+				pid = getpid();			// 子进程的 pid
+				setpgid(pid, pid);		// 将子进程加到单独的一个进程组中
+				signal (SIGINT, SIG_DFL);
+				signal (SIGTSTP, STGHandler);
+				signal (SIGQUIT, SIG_DFL);
+				signal (SIGTTIN, SIG_DFL);
+				signal (SIGTTOU, SIG_DFL);
+				signal (SIGCHLD, SIG_DFL);
+			}
+			// 执行子进程
+			_children[i]->Execute(false, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
+			exit(0);	// 正常运行，返回 0
+		} else {
+			if (need_control) {
+				setpgid(pid, pid);		// 将子进程加到单独的一个进程组中
+				auto job_pool = JobPool::Instance();
+				job_pool->AddJob(pid, _children[i]->GetSentence());
+			}
+		}
+	}
+	_children[size - 1]->Execute(true, infile, outfile, errfile);
+	if (!need_control) {
+		while (wait(nullptr) > 0); // 等待所有子进程结束
+	}
+	if (cont) {
+		return;
+	} else {
+		exit(0);
+	}
+}
+
+std::string ParaNode::GetOperator() {
+	return "&";
+}
+
+// 顺序节点
+void SeqNode::Execute(bool cont, int infile, int outfile, int errfile) {
+	int size = _children.size();
+	for (int i = 0; i < size; i++) {
+		_children[i]->Execute(true, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
+	}
+	_children[size - 1]->Execute(true, infile, outfile, errfile);
+	if (cont) {
+		return;
+	} else {
+		exit(0);
+	}
+}
+
+std::string SeqNode::GetOperator() {
+	return ";";
+}
+
+// And 节点
+void AndNode::Execute(bool cont, int infile, int outfile, int errfile) {
+	int size = _children.size();
+	_children[0]->Execute(true, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
+	auto globals = SpecialVarPool::Instance();
+	for (int i = 1; i < size - 1; i++) {
+		if (globals->GetReturn() != 0) {
+			break;
+		}
+		_children[i]->Execute(true, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
+	}
+	if (globals->GetReturn() == 0) {
+		_children[size - 1]->Execute(true, infile, outfile, errfile);
+	}
+	if (cont) {
+		return;
+	} else {
+		exit(0);
+	}
+}
+
+std::string AndNode::GetOperator() {
+	return "&&";
+}
+
+// Or 节点
+void OrNode::Execute(bool cont, int infile, int outfile, int errfile) {
+	int size = _children.size();
+	_children[0]->Execute(true, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
+	auto globals = SpecialVarPool::Instance();
+	for (int i = 1; i < size - 1; i++) {
+		if (globals->GetReturn() == 0) {
+			break;
+		}
+		_children[i]->Execute(true, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
+	}
+	if (globals->GetReturn() != 0) {
+		_children[size - 1]->Execute(true, infile, outfile, errfile);
+	}
+	if (cont) {
+		return;
+	} else {
+		exit(0);
+	}
+}
+
+std::string OrNode::GetOperator() {
+	return "||";
+}
+
+// 叶子节点
 std::string LeafNode::GetSentence() {
 	std::string str(_sentence[0]);
 	int size = _sentence.size();
@@ -204,11 +235,20 @@ std::string LeafNode::GetSentence() {
 	return str;
 }
 
+void LeafNode::Print(int step) {
+	Node::Print(step);
+	fprintf(stdout, "Command: ");
+	for (const auto &word : _sentence) {
+		fprintf(stdout, "%s ", word.c_str());
+	}
+	fputc('\n', stdout);
+}
+
 void LeafNode::SetSentence(const Sentence &sentence) {
 	_sentence = sentence;
 }
 
-int LeafNode::Execute(bool cont, int infile, int outfile, int errfile) {
+void LeafNode::Execute(bool cont, int infile, int outfile, int errfile) {
 	CommandFactory* factory = CommandFactory::Instance();
 	auto command = factory->GetCommand(_sentence[0]);
 	command->Redirect(0, infile);
@@ -236,52 +276,34 @@ int LeafNode::Execute(bool cont, int infile, int outfile, int errfile) {
 		} else {
 			setpgid(pid, pid);
 			tcsetpgrp(STDIN_FILENO, pid);
-			fprintf(stderr, "Start waiting.");
 			waitpid(pid, nullptr, 0);	// 等待子进程结束
-			fprintf(stderr, "End waiting.");
 			tcsetpgrp(STDIN_FILENO, getpid());
 			delete command;
 			if (cont) {
-				return 0;
+				return;
 			} else {
 				exit(0);
 			}
 		}
 	} else {
 		// 如果是内部命令，或者是后台进程，只需要在当前的进程里面执行就好了
-		int ret = command->Execute(_sentence);
+		command->Execute(_sentence);
 		delete command;
 		if (cont) {
-			return ret;
+			return;
 		} else {
 			exit(0);
 		}
 	}
 }
 
-/*
- * 空节点
- */
-
+// 空节点
 void NullNode::Print(int step) {
 	Node::Print(step);
 	fprintf(stdout, "Null Node\n");
 }
 
-// 执行命令，并不做什么
-int NullNode::Execute(bool cont, int infile, int outfile, int errfile) {
-	return 0;
-}
-
-// 打印叶节点
-void LeafNode::Print(int step) {
-	Node::Print(step);
-	fprintf(stdout, "Command: ");
-	for (const auto &word : _sentence) {
-		fprintf(stdout, "%s ", word.c_str());
-	}
-	fputc('\n', stdout);
-}
+void NullNode::Execute(bool cont, int infile, int outfile, int errfile) {}
 
 /*
  * 节点工厂
@@ -306,6 +328,12 @@ Node *NodeFactory::CreateCompositeNode(NodeType type) {
 			return new PipedNode;
 		case kParaNode:
 			return new ParaNode;
+		case kSeqNode:
+			return new SeqNode;
+		case kAndNode:
+			return new AndNode;
+		case kOrNode:
+			return new OrNode;
 		default:
 			return nullptr;
 	}

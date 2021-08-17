@@ -11,7 +11,7 @@ Deliminator::Deliminator(char *str) : _cur(0), _len(strlen(str)) {
 }
 
 bool Deliminator::IsDeliminator(char ch) {
-	return ch == '(' || ch == ')' || ch == '&' || ch == '|';
+	return ch == '(' || ch == ')' || ch == ';';
 }
 
 std::string Deliminator::GetNext() {
