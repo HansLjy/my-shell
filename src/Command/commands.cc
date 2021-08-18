@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include <stdio.h>
+#include <cstdio>
 #include <dirent.h>
 #include <fcntl.h>
 #include <cstdlib>
@@ -32,11 +32,22 @@ int WhichRedirect(const std::string& arg) {
 	return -1;							// 不是重定向符号
 }
 
-void Command::Redirect(int id, int fd) {
-	switch (id) {
-		case 0: _in = fd; break;
-		case 1: _out = fd; break;
-		case 2: _err = fd; break;
+void Command::Redirect() {
+	// 重定向文件的时候按照局部覆盖全局要求的原则，即显示的重定向大于管道的要求
+	if (_in_red != STDIN_FILENO) {
+		dup2(_in_red, STDIN_FILENO);
+	} else if (_in != STDIN_FILENO) {
+		dup2(_in, STDIN_FILENO);
+	}
+	if (_out_red != STDOUT_FILENO) {
+		dup2(_out_red, STDOUT_FILENO);
+	} else if (_out != STDOUT_FILENO) {
+		dup2(_out, STDOUT_FILENO);
+	}
+	if (_err_red != STDERR_FILENO) {
+		dup2(_err_red, STDERR_FILENO);
+	} else if (_err != STDERR_FILENO) {
+		dup2(_err, STDERR_FILENO);
 	}
 }
 
@@ -62,6 +73,12 @@ void Command::CloseFiles() {
 		close(_out);
 	if (_err != STDERR_FILENO)
 		close(_err);
+	if (_in_red != STDIN_FILENO)
+		close(_in_red);
+	if (_out_red != STDOUT_FILENO)
+		close(_out_red);
+	if (_err_red != STDERR_FILENO)
+		close(_err_red);
 }
 
 /*
@@ -69,51 +86,51 @@ void Command::CloseFiles() {
  * 1. 检查重定向符号，进行重定向，打开相关文件
  * 完成这些工作后，调用 RealExecute 进行子类的调用真正执行命令
  */
-int Command::Execute(const Sentence &args) {
+int Command::Execute(const Sentence &args, int infile, int outfile, int errfile) {
+	_in = infile;
+	_out = outfile;
+	_err = errfile;
 	int argc = args.size();
 	int arg_id = 1;
 	while (arg_id < argc && WhichRedirect(args.at(arg_id)) == -1)
 		arg_id++;
 	_argc = arg_id;	// 参数到此为止
 	// 以下都是重定向信息
-	CopyFiles();
 	while (arg_id < argc) {
 		int redirect = WhichRedirect(args.at(arg_id));
 		if (redirect == -1) {	// 重定向没有放在末尾
 			fprintf(stderr, "Redirection info should be placed in the end.\n");
 			CloseFiles();		// 关闭已经打开的文件
-			RecoverFiles();		// 恢复正常的输入输出
 			return 1;
 		}
 		if (arg_id == args.size()) {	// 有重定向标记但没有具体的文件
 			fprintf(stderr, "Redirection target missing\n");
 			CloseFiles();		// 关闭已经打开的文件
-			RecoverFiles();		// 恢复正常的输入输出
 			return 1;
 		}
 		const char* file = args.at(arg_id + 1).c_str();
 		switch (redirect) {
 			case 0:	// 重载标准输入
-				_in = open(file, O_RDONLY | O_CREAT, 0666);
+				_in_red = open(file, O_RDONLY | O_CREAT, 0666);
 				break;
 			case 1: // 重载标准输出
-				_out = open(file, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+				_out_red = open(file, O_WRONLY | O_CREAT | O_TRUNC, 0666);
 				break;
 			case 2:	// 重载标准错误输出
-				_err = open(file, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+				_err_red = open(file, O_WRONLY | O_CREAT | O_TRUNC, 0666);
 				break;
 			case 3:	// 追加重载标准输出
-				_out = open(file, O_WRONLY | O_CREAT | O_APPEND, 0666);
+				_out_red = open(file, O_WRONLY | O_CREAT | O_APPEND, 0666);
 				break;
 			case 4: // 追加重载标准错误输出
-				_err = open(file, O_WRONLY | O_CREAT | O_APPEND, 0666);
+				_err_red = open(file, O_WRONLY | O_CREAT | O_APPEND, 0666);
 				break;
 		}
 		arg_id += 2;
 	}
-	dup2(_in, STDIN_FILENO);
-	dup2(_out, STDOUT_FILENO);
-	dup2(_err, STDERR_FILENO);
+	// 开始重定向
+	CopyFiles();
+	Redirect();
 	int ret = RealExecute(args);
 	CloseFiles();
 	RecoverFiles();
@@ -139,7 +156,7 @@ void write(int fd, const char* str) {
 int CommandCd::RealExecute(const Sentence &args) {
 	if (_argc > 2) {
 		// cd 的参数至多只能有一个
-		write(_err, "cd: too many arguments.\n");
+		fprintf(stderr, "cd: too many arguments.\n");
 		return 1;
 	}
 	const char *target = args.size() == 1 ? "~" : args[1].c_str();
@@ -150,19 +167,18 @@ int CommandCd::RealExecute(const Sentence &args) {
 int CommandDir::RealExecute(const Sentence &args) {
 	if (_argc > 2) {
 		// dir 的参数至多只能有 1 个
-		write(_err, "dir: too many arguments.\n");
+		fprintf(stderr, "dir: too many arguments.\n");
 		return 1;
 	}
 	const char * target = args.size() == 1 ? "." : args[1].c_str();
 	auto dir = opendir(target);	// 打开目标文件夹
 	if (dir == nullptr) {
-		write(_err, "dir: directory does not exist!\n");
+		fprintf(stderr, "dir: directory does not exist!\n");
 		return 1;
 	}
 	auto entry = readdir(dir);	// 一个个取出文件读取
 	while (entry != nullptr) {
-		write(_out, entry->d_name);
-		write(_out, "\n");
+		fprintf(stdout, "%s\n", entry->d_name);
 		entry = readdir(dir);
 	}
 	return 0;
@@ -171,10 +187,9 @@ int CommandDir::RealExecute(const Sentence &args) {
 // Tested
 int CommandEcho::RealExecute(const Sentence &args) {
 	for (int i = 1; i < _argc; i++) {
-		write(_out, args[i].c_str());
-		write(_out, " ");
+		fprintf(stdout, "%s ", args[i].c_str());
 	}
-	write(_out, "\n");
+	fprintf(stdout, "\n");
 	return 0;
 }
 
@@ -186,12 +201,11 @@ int CommandExit::RealExecute(const Sentence &args) {
 // Tested
 int CommandPwd::RealExecute(const Sentence &args) {
 	if (_argc > 1) {
-		write(_err, "pwd: too many arguments.\n");
+		fprintf(stderr, "pwd: too many arguments.\n");
 		return 1;
 	}
 	char* pwd = get_current_dir_name();
-	write(_out, pwd);
-	write(_out, "\n");
+	fprintf(stdout, "%s\n", pwd);
 	return 0;
 }
 
@@ -200,7 +214,7 @@ int CommandTime::RealExecute(const Sentence &args) {
 	char buf[100];
 	if (_argc > 1) {
 		// Time 不能含有参数
-		write(_err, "time: too many arguments.\n");
+		fprintf(stderr, "time: too many arguments.\n");
 		return 1;
 	}
 	time_t cur_time;
@@ -210,7 +224,7 @@ int CommandTime::RealExecute(const Sentence &args) {
 			info->tm_year + 1900, info->tm_mon + 1, info->tm_mday,	// 年月日
 			info->tm_hour, info->tm_min, info->tm_sec				// 时分秒
 			);
-	write(_out, buf);
+	fprintf(stdout, buf);
 	return 0;
 }
 
@@ -219,17 +233,17 @@ int CommandTime::RealExecute(const Sentence &args) {
 int CommandClr::RealExecute(const Sentence &args) {
 	if (_argc > 1) {
 		// clr 不带参数
-		write(_err, "clr: too many arguments.\n");
+		fprintf(stderr, "clr: too many arguments.\n");
 		return 1;
 	}
-	write(_out, "\x1b[H\x1b[2J");	// 输出清屏用的特殊字符串
+	fprintf(stdout, "\x1b[H\x1b[2J");	// 输出清屏用的特殊字符串
 	return 0;
 }
 
 // Tested
 int CommandExec::RealExecute(const Sentence &args) {
 	if (_argc < 2) {
-		write(_err, "exec: too few arguments\n");
+		fprintf(stderr, "exec: too few arguments\n");
 		return 1;
 	}
 	auto command = CommandFactory::Instance()->GetCommand(args[1].c_str());
@@ -237,7 +251,7 @@ int CommandExec::RealExecute(const Sentence &args) {
 	for (int i = 1; i < _argc; i++) {
 		new_args.push_back(args[i]);
 	}
-	exit(command->Execute(new_args));
+	exit(command->Execute(new_args, _in_red, _out_red, _err_red));
 }
 
 // Tested
@@ -252,8 +266,8 @@ int CommandSet::RealExecute(const Sentence &args) {
 		extern char** environ;	// 环境变量数组
 		for (int index = 0; environ[index] != nullptr; index++) {
 			// 逐个打印
-			write(_out, environ[index]);
-			write(_out, "\n");
+			fprintf(stdout, environ[index]);
+			fprintf(stdout, "\n");
 		}
 	}
 	return 0;
@@ -262,7 +276,7 @@ int CommandSet::RealExecute(const Sentence &args) {
 // Tested
 int CommandUnset::RealExecute(const Sentence &args) {
 	if (_argc < 2) {
-		write(_err, "unset: too few arguments\n");
+		fprintf(stderr, "unset: too few arguments\n");
 		return 1;
 	}
 	for (int i = 1; i < _argc; i++) {
@@ -275,7 +289,7 @@ int CommandUnset::RealExecute(const Sentence &args) {
 int CommandShift::RealExecute(const Sentence &args) {
 	auto globals = SpecialVarPool::Instance();
 	if (args.size() > 2) {
-		write(_err, "shift: too many arguments\n");
+		fprintf(stderr, "shift: too many arguments\n");
 		globals->SetReturn(1);
 		return 1;
 	}
@@ -285,7 +299,7 @@ int CommandShift::RealExecute(const Sentence &args) {
 	}
 	int success = globals->Shift(shift);
 	if (!success) {
-		write(_err, "shift: n should be in range [0, argc]\n");
+		fprintf(stderr, "shift: n should be in range [0, argc]\n");
 		return 1;
 	}
 	return 0;
@@ -355,14 +369,14 @@ int CommandTest::CheckExist(const std::string &str) {
  */
 int CommandTest::RealExecute(const Sentence &args) {
 	if (_argc < 2) {
-		write(_err, "test: too few arguments\n");
+		fprintf(stderr, "test: too few arguments\n");
 		return 1;
 	}
 	if (IsOption(args[1])) {
 		auto op = WhichOption(args[1]);
 		if (_argc != 3) {
 			// 此时只可能是 test -d file 这样的形式
-			write(_err, "test: too many or too few arguments\n");
+			fprintf(stderr, "test: too many or too few arguments\n");
 			return 1;
 		}
 		switch (op) {
@@ -370,13 +384,13 @@ int CommandTest::RealExecute(const Sentence &args) {
 			case kFile: 	return !CheckFile(args[2]);
 			case kExist:	return !CheckExist(args[2]);
 			default:
-				write(_err, "test: invalid option");
+				fprintf(stderr, "test: invalid option");
 				return 1;
 		}
 		// -d -f -e 三种情况
 	} else {
 		if (_argc != 4) {
-			write(_err, "test: too many or too few arguments\n");
+			fprintf(stderr, "test: too many or too few arguments\n");
 		}
 		auto op = WhichOption(args[2]);
 		int lhs = atoi(args[1].c_str());
@@ -390,7 +404,7 @@ int CommandTest::RealExecute(const Sentence &args) {
 			case kNe:
 				return !Compare(op, lhs, rhs);
 			default:
-				write(_err, "test: invalid option");
+				fprintf(stderr, "test: invalid option");
 				return 1;
 		}
 	}
@@ -399,7 +413,7 @@ int CommandTest::RealExecute(const Sentence &args) {
 // Tested
 int CommandUmask::RealExecute(const Sentence &args) {
 	if (_argc > 2) {
-		write(_err, "umask: too many arguments\n");
+		fprintf(stderr, "umask: too many arguments\n");
 		return 1;
 	}
 	if (_argc == 1) {
@@ -408,8 +422,8 @@ int CommandUmask::RealExecute(const Sentence &args) {
 		umask(mask);				// 改回去
 		char buffer[10];
 		sprintf(buffer, "%04o", mask);	// 调整格式
-		write(_out, buffer);
-		write(_out, "\n");
+		fprintf(stdout, buffer);
+		fprintf(stdout, "\n");
 		return 0;
 	} else {
 		// 改变 umask
@@ -417,7 +431,7 @@ int CommandUmask::RealExecute(const Sentence &args) {
 		char *end;
 		mode = strtoul(args[1].c_str(), &end, 8);
 		if (*end != '\0') {
-			write(_err, "umask: invalid mask\n");
+			fprintf(stderr, "umask: invalid mask\n");
 			return 1;
 		}
 		umask(mode);
@@ -460,10 +474,16 @@ int CommandFg::RealExecute(const Sentence &args) {
 		}
 		int id = strtoul(args[1].c_str(), nullptr, 10);
 		auto job_pool = JobPool::Instance();
-		pid_t pid = job_pool->GetPID(id);
+		int pid = job_pool->GetPID(id);
+		if (pid < 0) {
+			fprintf(stderr, "fg: invalid job id\n");
+			return 1;
+		}
 		tcsetpgrp(STDIN_FILENO, pid);
-		kill(-pid, SIGCONT);
-		waitpid(pid, nullptr, 0);
+		kill(-pid, SIGCONT);	// 为了防止卡死，得发送 CONT 信号
+		int status;
+		waitpid(pid, &status, WUNTRACED);
+		ReportStatus(pid, status);
 		printf("%d\n", getpgrp());
 		tcsetpgrp(STDIN_FILENO, getpgrp());
 	}
@@ -481,8 +501,13 @@ int CommandBg::RealExecute(const Sentence &args) {
 		}
 		int id = strtoul(args[1].c_str(), nullptr, 10);
 		auto job_pool = JobPool::Instance();
-		pid_t pid = job_pool->GetPID(id);
+		int pid = job_pool->GetPID(id);
+		if (pid < 0) {
+			fprintf(stderr, "bg: Invalid job id\n");
+			return 1;
+		}
 		// 恢复执行
+		fprintf(stderr, "bg: %d\n", pid);
 		kill(-pid, SIGCONT);
 	}
 	return 0;

@@ -10,8 +10,8 @@
 
 class Command {
 public:
-	void Redirect(int id, int fd);
-	virtual int Execute(const Sentence& args);
+	void Redirect();
+	virtual int Execute(const Sentence& args, int infile, int outfile, int errfile);
 	virtual int RealExecute(const Sentence& args) = 0;
 
 	virtual ~Command() = default;
@@ -21,9 +21,24 @@ protected:
 	void CopyFiles();					// 保存原来的输入输出文件
 	void RecoverFiles();				// 恢复原来的输入输出文件
 	int _argc = 0;						// 包括命令在内的参数个数
+	/*
+	 * 简单解释一下这里为什么有三组输入输出：
+	 * 1. _stdxx 系列是用来保存原来的输入输出的，因为涉及到外部指令
+	 *    不可避免得要直接重定向，为了保证命令执行完毕之后我们还能够
+	 *    回到原来的输入输出，必须要拷贝一份原来的标准 IO
+	 * 2. _xx 系列是用来保存在不考虑单条指令的重定向情况下该指令的
+	 *    输入输出，比方说 cat test.txt | grep X 这条命令中前一条
+	 *    指令应该具有的输出是一个管道文件
+	 * 3. _xx_red 系列用来保存这条指令本身的重定向信息，比方说这条指
+	 *    令可能是 man cd > test.txt ，此时 _our_red 就应该是一
+	 *    个文件的 file descriptor
+	 */
 	int _in = STDIN_FILENO,				// 默认标准输入
 		_out = STDOUT_FILENO,			// 默认标准输出
 		_err = STDERR_FILENO;			// 默认标准错误输出
+	int _in_red = STDIN_FILENO,			// 重定向输入
+		_out_red = STDOUT_FILENO,		// 重定向输出
+		_err_red = STDERR_FILENO;		// 重定向错误输出
 	int _stdin, _stdout, _stderr;		// 标准输入输出文件的拷贝
 };
 

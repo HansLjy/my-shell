@@ -26,10 +26,10 @@ void Init() {
 
 		// 为自己开辟一个新的进程组
 		shell_pgid = getpid ();
-		if (setpgid (shell_pgid, shell_pgid) < 0) {
-			perror ("Couldn't put the shell in its own process group");
-			exit (1);
-		}
+//		if (setpgid (shell_pgid, shell_pgid) < 0) {
+//			perror ("Couldn't put the shell in its own process group");
+//			exit (1);
+//		}
 
 		// 控制终端
 		tcsetpgrp (shell_terminal, shell_pgid);

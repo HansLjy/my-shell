@@ -60,7 +60,7 @@ void CLI::Start() {
 		getline(&line, &len, stdin);
 		line[strlen(line) - 1] = '\0';	// 替换掉行末的空格
         auto res = parser->Parse(line);
-        res->Execute(true, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
+        res->Execute(true, true, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
 		delete res;
         free(line);
 

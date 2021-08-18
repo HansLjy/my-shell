@@ -20,7 +20,7 @@ JobPool *JobPool::Instance() {
 int JobPool::AddJob(pid_t pid, const std::string &str) {
 	int size = _jobs.size();
 	for (int i = 0; i < size; i++) {
-		if (_jobs[i]._status == Job::kDone) {
+		if (_jobs[i]._status == Job::kDone || _jobs[i]._status == Job::kKilled) {
 			// 如果任务已经完成了，则可以被替换掉
 			_jobs[i] = Job(Job::kRunning, pid, str);
 			return i;
@@ -32,10 +32,10 @@ int JobPool::AddJob(pid_t pid, const std::string &str) {
 
 // 返回 -1 表示遇到了不在运行的进程
 int JobPool::GetPID(int idx) {
-	if (idx >= _jobs.size()) {
+	if (idx >= _jobs.size() || idx < 0) {
 		return -1;
 	}
-	if (_jobs[idx]._status == Job::kDone) {
+	if (_jobs[idx]._status == Job::kDone || _jobs[idx]._status == Job::kKilled) {
 		return -1;
 	}
 	return _jobs[idx]._pid;
@@ -46,9 +46,7 @@ void JobPool::ChangeState(pid_t pgid, Job::Status status) {
 	for (int i = 0; i < size; i++) {
 		if (_jobs[i]._pid == pgid) {
 			_jobs[i]._status = status;
-			if (status == Job::kDone || status == Job::kKilled) {
-				_finished_jobs.push(_jobs[i]);
-			}
+			_changed_jobs.push(_jobs[i]);
 			break;
 		}
 	}
@@ -59,13 +57,16 @@ void JobPool::PrintJobs() {
 	for (int i = 0; i < size; i++) {
 		const auto& job = _jobs[i];
 		if (job._status != Job::kDone && job._status != Job::kKilled) {
-			fprintf(stdout, "[%d]", i);
+			fprintf(stdout, "[%d]\t%d", i, job._pid);
 			switch (job._status) {
 				case Job::kRunning:
 					fprintf(stdout, "\tRunning\t");
 					break;
 				case Job::kSuspended:
 					fprintf(stdout, "\tSuspended\t");
+					break;
+				case Job::kForeground:
+					fprintf(stdout, "\tForeground\t");
 					break;
 			}
 			fprintf(stdout, "%s\n", job._str.c_str());
@@ -74,8 +75,8 @@ void JobPool::PrintJobs() {
 }
 
 void JobPool::PrintFinished() {
-	while (!_finished_jobs.empty()) {
-		Job job = _finished_jobs.front();
+	while (!_changed_jobs.empty()) {
+		Job job = _changed_jobs.front();
 		switch (job._status) {
 			case Job::kDone:
 				fprintf(stdout, "Done:\t");
@@ -83,9 +84,15 @@ void JobPool::PrintFinished() {
 			case Job::kKilled:
 				fprintf(stdout, "Killed:\t");
 				break;
+			case Job::kSuspended:
+				fprintf(stdout, "Suspended:\t");
+				break;
+			case Job::kRunning:
+				fprintf(stdout, "Continued:\t");
+				break;
 		}
 		fprintf(stdout, "%d\t\t%s\n", job._pid, job._str.c_str());
-		_finished_jobs.pop();
+		_changed_jobs.pop();
 	}
 }
 
@@ -95,33 +102,33 @@ void CHLDHandler (int sig) {
 	auto job_pool = JobPool::Instance();
 	auto & jobs = job_pool->_jobs;
 	for (auto & job : jobs) {
-		if (job._status == Job::kDone || job._status == Job::kKilled)
+		if (
+			job._status == Job::kDone
+			|| job._status == Job::kKilled
+			|| job._status == Job::kForeground
+		)
 			continue;
-		if(waitpid(job._pid, &status, WNOHANG) > 0) {
-			auto pid = job._pid;
-			if (WIFEXITED(status)) {
-				// 正常退出
-				job_pool->ChangeState(pid, Job::kDone);
-				fprintf(stderr, "Done\n");
-			} else if (WIFSTOPPED(status)) {
-				// 挂起
-				job_pool->ChangeState(pid, Job::kSuspended);
-				fprintf(stderr, "Suspended\n");
-			} else if (WIFCONTINUED(status)) {
-				// 继续
-				job_pool->ChangeState(pid, Job::kRunning);
-				fprintf(stderr, "Continued\n");
-			} else {
-				// 因为各种原因被杀死了
-				job_pool->ChangeState(pid, Job::kKilled);
-				fprintf(stderr, "Killed\n");
-			}
+		if(waitpid(job._pid, &status, WNOHANG | WUNTRACED | WCONTINUED) > 0) {
+			ReportStatus(job._pid, status);
 			break;
 		}
 	}
 }
 
-void STGHandler (int sig) {
-	printf("Ctrl-Z detected\n");
+void ReportStatus(pid_t pid, int status) {
+	auto job_pool = JobPool::Instance();
+	if (WIFEXITED(status)) {
+		// 正常退出
+		job_pool->ChangeState(pid, Job::kDone);
+	} else if (WIFSTOPPED(status)) {
+		// 挂起
+		job_pool->ChangeState(pid, Job::kSuspended);
+	} else if (WIFCONTINUED(status)) {
+		// 继续
+		job_pool->ChangeState(pid, Job::kRunning);
+	} else {
+		// 因为各种原因被杀死了
+		job_pool->ChangeState(pid, Job::kKilled);
+	}
 }
-// 状态改变的子进程的 id
+

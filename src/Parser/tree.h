@@ -27,12 +27,9 @@ public:
 	virtual std::string GetSentence();					// 取得命令语句
 	virtual void SetSentence(const Sentence& sentence);	// 设置命令语句
 
-	virtual int GetSize();			// 取得节点大小
-	virtual Node* GetNode(int id);	// 取得第 id 个节点
-
 	virtual void Print(int step);			// 打印节点，step 为前面的空格个数
 
-	virtual void Execute(bool cont, int infile, int outfile, int errfile) = 0;	// 执行整棵树对应的指令
+	virtual void Execute(bool is_shell, bool cont, int infile, int outfile, int errfile) = 0;	// 执行整棵树对应的指令
 
 	virtual ~Node() = default;
 };
@@ -48,8 +45,8 @@ public:
 	~CompositeNode();
 
 protected:
-	virtual int GetSize();			// 取得节点大小
-	virtual Node* GetNode(int id);	// 取得第 id 个节点
+	// 取得节点大小
+	// 取得第 id 个节点
 	std::vector<Node*> _children;	// 孩子节点
 };
 
@@ -57,7 +54,7 @@ protected:
 class NullNode : public Node {
 public:
 	virtual void Print(int step);	// 打印节点
-	virtual void Execute(bool cont, int infile, int outfile, int errfile);			// 执行
+	virtual void Execute(bool is_shell, bool cont, int infile, int outfile, int errfile);			// 执行
 };
 
 // 叶子节点，只包含一条指令
@@ -66,7 +63,7 @@ public:
 	virtual std::string GetSentence();					// 取得命令
 	virtual void SetSentence(const Sentence& sentence);	// 设置命令
 	virtual void Print(int step);						// 打印节点
-	virtual void Execute(bool cont, int infile, int outfile, int errfile);
+	virtual void Execute(bool is_shell, bool cont, int infile, int outfile, int errfile);
 
 private:
 	Sentence _sentence;	// 命令语句
@@ -76,32 +73,32 @@ private:
 class PipedNode : public CompositeNode {
 public:
 	virtual std::string GetOperator();
-	virtual void Execute(bool cont, int infile, int outfile, int errfile);
+	virtual void Execute(bool is_shell, bool cont, int infile, int outfile, int errfile);
 };
 
 // 并行节点，用 & 连接的命令
 class ParaNode : public CompositeNode {
 public:
 	virtual std::string GetOperator();
-	virtual void Execute(bool cont, int infile, int outfile, int errfile);
+	virtual void Execute(bool is_shell, bool cont, int infile, int outfile, int errfile);
 };
 
 class SeqNode : public CompositeNode {
 public:
 	virtual std::string GetOperator();
-	virtual void Execute(bool cont, int infile, int outfile, int errfile);
+	virtual void Execute(bool is_shell, bool cont, int infile, int outfile, int errfile);
 };
 
 class AndNode : public CompositeNode {
 public:
 	virtual std::string GetOperator();
-	virtual void Execute(bool cont, int infile, int outfile, int errfile);
+	virtual void Execute(bool is_shell, bool cont, int infile, int outfile, int errfile);
 };
 
 class OrNode : public CompositeNode {
 public:
 	virtual std::string GetOperator();
-	virtual void Execute(bool cont, int infile, int outfile, int errfile);
+	virtual void Execute(bool is_shell, bool cont, int infile, int outfile, int errfile);
 };
 
 // 节点工厂
