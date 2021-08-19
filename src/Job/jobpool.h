@@ -18,8 +18,8 @@ struct Job {
 		kRunning,			// 作业正在运行
 		kSuspended,			// 作业被挂起
 	} _status;
-	pid_t _pid;		// 作业的 pid
-	std::string _str;	// 描述作业用的字符串
+	pid_t _pid;				// 作业的 pid
+	std::string _str;		// 描述作业用的字符串
 	Job(Status status, pid_t pid, const std::string& str);
 };
 

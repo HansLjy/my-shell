@@ -19,18 +19,53 @@ enum NodeType {
 	kOrNode,	// 用 || 连起来的
 };
 
-// 节点的基类
+/**
+ * 节点的基类
+ * @note
+ * 	此处我采用了 Composite 设计模式，各种节点同属于 Node 的子类，因此 Node 将要包含足够的
+ * 	接口，来保证任何子类的功能都可以通过 Node* 来调用。
+ */
 class Node {
 public:
-	virtual void AppendChild(Node*);	// 添加子节点
+	/**
+	 * 添加子节点
+	 * @param child 子节点
+	 * @warning 只对复合型节点有用，叶子节点此函数被重载为空函数。
+	 */
+	virtual void AppendChild(Node* child);
 
-	virtual std::string GetSentence();					// 取得命令语句
+	/**
+	 * 获得该语法树子树的命令语句
+	 * @return 命令语句
+	 */
+	virtual std::string GetSentence();
+
+	/**
+	 * 设置命令语句
+	 * @param sentence
+	 * @warning 只对叶子节点有用，复合型节点此函数被重载为空函数。
+	 */
 	virtual void SetSentence(const Sentence& sentence);	// 设置命令语句
 
-	virtual void Print(int step);			// 打印节点，step 为前面的空格个数
+	/**
+	 * 打印树状的语法树
+	 * @param step 打印起点的缩进，以空格为单位
+	 */
+	virtual void Print(int step);
 
+	/**
+	 * 执行节点对应的命令
+	 * @param is_shell 当前函数是否由 shell 本身来调用
+	 * @param cont 是否需要返回，如果是 false，命令执行完之后允许直接结束进程
+	 * @param infile 标准输入
+	 * @param outfile 标准输出
+	 * @param errfile 标准错误输出
+	 */
 	virtual void Execute(bool is_shell, bool cont, int infile, int outfile, int errfile) = 0;	// 执行整棵树对应的指令
 
+	/**
+	 * 虚析构函数
+	 */
 	virtual ~Node() = default;
 };
 

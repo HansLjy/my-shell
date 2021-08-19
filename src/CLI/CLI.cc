@@ -10,6 +10,7 @@
 #include "parser.h"
 #include "global.h"
 #include "jobpool.h"
+#include "exceptions.h"
 
 CLI* CLI::theCLI = nullptr;
 
@@ -42,15 +43,8 @@ void CLI::Initialization() {
 
 void CLI::Start() {
 	auto parser = Parser::Instance();
+	auto job_pool = JobPool::Instance();
 	while (true) {
-//		auto globals = SpecialVarPool::Instance();
-//		int argc = globals->GetArgc();
-//		fprintf(stdout, "$# = %d\n", argc);
-//		for (int i = 0; i <= argc; i++) {
-//			fprintf(stdout, "$%d = %s\n", i, globals->GetArg(i).c_str());
-//		}
-//		fprintf(stdout, "$? = %d\n", globals->GetReturn());
-
 		prompt = getlogin();	// 获取用户名
 		prompt = prompt + ":";	// 分隔用户名和路径
 		prompt = prompt + get_current_dir_name();
@@ -59,12 +53,18 @@ void CLI::Start() {
 		fprintf(stdout, "%s$", prompt.c_str());
 		getline(&line, &len, stdin);
 		line[strlen(line) - 1] = '\0';	// 替换掉行末的空格
-        auto res = parser->Parse(line);
+		Node* res;
+		try {
+			res = parser->Parse(line);
+		} catch (Exception& exc) {
+			exc.ShowInfo();
+			free(line);
+			continue;
+		}
         res->Execute(true, true, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
 		delete res;
         free(line);
 
-        auto job_pool = JobPool::Instance();
         job_pool->PrintFinished();
     }
 }

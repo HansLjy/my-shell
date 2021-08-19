@@ -26,10 +26,10 @@ void Init() {
 
 		// 为自己开辟一个新的进程组
 		shell_pgid = getpid ();
-//		if (setpgid (shell_pgid, shell_pgid) < 0) {
-//			perror ("Couldn't put the shell in its own process group");
-//			exit (1);
-//		}
+		if (setpgid (shell_pgid, shell_pgid) < 0) {
+			perror ("Couldn't put the shell in its own process group");
+			exit (1);
+		}
 
 		// 控制终端
 		tcsetpgrp (shell_terminal, shell_pgid);
@@ -38,16 +38,12 @@ void Init() {
 
 int main(int argc, char* argv[]) {
 	Init();
-	try {
-		auto globals = SpecialVarPool::Instance();
-		for (int i = argc - 1; i >= 0; i--) {
-			globals->SetArg(i, argv[i]);
-		}
-		CLI *cli = CLI::Instance();
-		cli->Initialization();
-		cli->Start();
-	} catch (Exception exc){
-		exc.ShowInfo();
+	auto globals = SpecialVarPool::Instance();
+	for (int i = argc - 1; i >= 0; i--) {
+		globals->SetArg(i, argv[i]);
 	}
+	CLI *cli = CLI::Instance();
+	cli->Initialization();
+	cli->Start();
     return 0;
 }

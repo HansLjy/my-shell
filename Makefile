@@ -345,30 +345,6 @@ src/Parser/parser.cc.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/parser.cc.s
 .PHONY : src/Parser/parser.cc.s
 
-src/Parser/toolbox.o: src/Parser/toolbox.cc.o
-.PHONY : src/Parser/toolbox.o
-
-# target to build an object file
-src/Parser/toolbox.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/toolbox.cc.o
-.PHONY : src/Parser/toolbox.cc.o
-
-src/Parser/toolbox.i: src/Parser/toolbox.cc.i
-.PHONY : src/Parser/toolbox.i
-
-# target to preprocess a source file
-src/Parser/toolbox.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/toolbox.cc.i
-.PHONY : src/Parser/toolbox.cc.i
-
-src/Parser/toolbox.s: src/Parser/toolbox.cc.s
-.PHONY : src/Parser/toolbox.s
-
-# target to generate assembly for a file
-src/Parser/toolbox.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyShell.dir/build.make CMakeFiles/MyShell.dir/src/Parser/toolbox.cc.s
-.PHONY : src/Parser/toolbox.cc.s
-
 src/Parser/tree.o: src/Parser/tree.cc.o
 .PHONY : src/Parser/tree.o
 
@@ -429,9 +405,6 @@ help:
 	@echo "... src/Parser/parser.o"
 	@echo "... src/Parser/parser.i"
 	@echo "... src/Parser/parser.s"
-	@echo "... src/Parser/toolbox.o"
-	@echo "... src/Parser/toolbox.i"
-	@echo "... src/Parser/toolbox.s"
 	@echo "... src/Parser/tree.o"
 	@echo "... src/Parser/tree.i"
 	@echo "... src/Parser/tree.s"
