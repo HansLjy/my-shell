@@ -53,6 +53,7 @@ private:
 	 */
 	int WhichOperator(const Token& token);
 	Operator GetOperator(int id);			// 根据 ID 返回符号
+	void Replace(std::string& token);		// 使用环境变量进行替换
 	void MergeNode (std::stack<int>&, std::stack<Node*>&);
 	std::vector<Operator> _operators;		// 存储的运算符
 

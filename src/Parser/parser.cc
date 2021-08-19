@@ -2,12 +2,14 @@
 // Created by hansljy on 2021/8/8.
 //
 
-#include <assert.h>
+#include <cassert>
 #include <stack>
+#include <sstream>
 #include "parser.h"
 #include "deliminator.h"
 #include "tree.h"
 #include "exceptions.h"
+#include "global.h"
 
 Parser* Parser::theParser = nullptr;
 
@@ -62,6 +64,33 @@ void Parser::MergeNode (
 	operand_stack.push(node);
 }
 
+void Parser::Replace(std::string &token) {
+	auto globals = SpecialVarPool::Instance();
+	if (token[0] != '$' || token.size() == 1)
+		return;
+	if (token.size() == 2 && token[1] == '?') {
+		std::stringstream ss;
+		token = "";
+		ss << globals->GetReturn();
+		ss >> token;
+		return;
+	}
+	if (token.size() == 2 && token[1] == '#') {
+		std::stringstream ss;
+		token = "";
+		ss << globals->GetArgc();
+		ss >> token;
+		return;
+	}
+	const char* str = token.c_str();
+	char *end;
+	int id = strtoul(str + 1, &end, 10);
+	if (*end != '\0') {
+		return;
+	}
+	token = globals->GetArg(id);
+}
+
 // 为了实现 exception safe,需要在异常发生的时候回收垃圾
 void Parser::ClearUp(std::stack<Node *>& stack) {
 	while (!stack.empty()) {
@@ -79,6 +108,7 @@ Node *Parser::Parse(char *str) {
 	std::stack<int> operator_stack;				// 操作符栈
 	Sentence sentence;							// 累积命令
 	while (!(token = deliminator.GetNext()).empty()) {
+		Replace(token);
 		int op_id = WhichOperator(token);
 		if (op_id == -1) {	// 如果不是运算符
 			sentence.push_back(token);
