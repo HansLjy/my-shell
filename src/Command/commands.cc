@@ -157,7 +157,12 @@ int CommandCd::RealExecute(const Sentence &args) {
 	}
 	// 不加参数的时候默认是 $HOME
 	const char *target = args.size() == 1 ? getenv("HOME") : args[1].c_str();
-	return chdir(target);
+	if (chdir(target) < 0) {
+		fprintf(stderr, "cd: invalid directory.\n");
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 // Tested

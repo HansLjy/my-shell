@@ -180,7 +180,7 @@ std::string ParaNode::GetOperator() {
 // 顺序节点
 void SeqNode::Execute(bool is_shell, bool cont, int infile, int outfile, int errfile) {
 	int size = _children.size();
-	for (int i = 0; i < size; i++) {	// 枚举子节点顺序执行
+	for (int i = 0; i < size - 1; i++) {	// 枚举子节点顺序执行
 		_children[i]->Execute(is_shell, true, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
 	}
 	_children[size - 1]->Execute(is_shell, true, infile, outfile, errfile);
