@@ -7,14 +7,15 @@
 SpecialVarPool* SpecialVarPool::thePool = nullptr;
 
 SpecialVarPool *SpecialVarPool::Instance() {
-	if (thePool == nullptr) {
+	// Singleton 模式
+	if (thePool == nullptr)
 		thePool = new SpecialVarPool;
-	}
 	return thePool;
 }
 
 void SpecialVarPool::SetArg(int idx, const std::string &val) {
 	if (idx >= _args.size()) {
+		// 扩大 vector
 		_args.resize(idx + 1);
 	}
 	_args[idx] = val;
@@ -22,6 +23,7 @@ void SpecialVarPool::SetArg(int idx, const std::string &val) {
 
 std::string SpecialVarPool::GetArg(int idx) {
 	if (idx >= _args.size() || idx < 0) {
+		// 下标不合理
 		return "";				// 返回空串
 	}
 	return _args[idx];
@@ -42,7 +44,7 @@ int SpecialVarPool::GetReturn() {
 bool SpecialVarPool::Shift(int n) {
 	int argc = _args.size();
 	if (n < 0 || n >= argc - 1) {
-		return false;
+		return false;	// 移动距离不合理
 	}
 	for (int i = 1; i < argc - n; i++) {
 		_args[i] = _args[i + n];	// 移动

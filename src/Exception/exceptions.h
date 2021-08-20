@@ -9,11 +9,19 @@
 
 class Exception {
 public:
+	/**
+	 * Exception 构造函数
+	 * @param str 异常对应的提示信息
+	 */
 	Exception(const std::string& str);
+
+	/**
+	 * 打印 Exception 信息
+	 */
 	virtual void ShowInfo();
 
 protected:
-	std::string _info;
+	std::string _info;	// 异常对应的提示信息
 };
 
 #endif //MYSHELL_EXCEPTIONS_H

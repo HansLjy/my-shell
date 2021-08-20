@@ -10,17 +10,59 @@
 
 class Command {
 public:
+	/**
+	 * 重定向 stdin stdout stderr
+	 */
 	void Redirect();
+
+	/**
+	 * 执行命令
+	 * @param args 命令的参数
+	 * @param infile 标准输入
+	 * @param outfile 标准输出
+	 * @param errfile 标准错误输出
+	 * @return 命令是否正确完成
+	 * @note Execute 采用模板模式进行设计，它只进行所有 Command 共同的操作，
+	 * 		 而把真正命令的执行代理给 RealExecute 函数
+	 */
 	virtual int Execute(const Sentence& args, int infile, int outfile, int errfile);
+
+	/**
+	 * 实际上命令的执行
+	 * @param args 命令的参数
+	 * @return 命令的执行返回值
+	 */
 	virtual int RealExecute(const Sentence& args) = 0;
 
+	/**
+	 * 虚析构函数
+	 */
 	virtual ~Command() = default;
+
+	/**
+	 * 判定当前命令是不是外部命令
+	 * @param cmd 待判断的命令对象
+	 * @return 是否是外部命令
+	 */
 	static bool IsExternal(Command* cmd);	// 判断当前命令是不是外部命令
+
 protected:
+	/**
+	 * 关闭输入输出文件中不是标准输入输出的文件
+	 */
 	void CloseFiles();
-	void CopyFiles();					// 保存原来的输入输出文件
-	void RecoverFiles();				// 恢复原来的输入输出文件
-	int _argc = 0;						// 包括命令在内的参数个数
+
+	/**
+	 * 备份标准输入输出，因为重定向可能会改变这些输入输出的值
+	 */
+	void CopyFiles();
+
+	/**
+	 * 利用之前的备份还原 标准输入输出
+	 */
+	void RecoverFiles();
+
+	int _argc = 0; // 包括命令在内的参数个数
 	/*
 	 * 简单解释一下这里为什么有三组输入输出：
 	 * 1. _stdxx 系列是用来保存原来的输入输出的，因为涉及到外部指令
@@ -41,6 +83,11 @@ protected:
 		_err_red = STDERR_FILENO;		// 重定向错误输出
 	int _stdin, _stdout, _stderr;		// 标准输入输出文件的拷贝
 };
+
+/**
+ * 下面的大部分命令都是重载 RealExecute 函数，我觉得没必要再进行注释了
+ * 为了完成五行中一定要有一行注释的标准而去加一些废话我认为是愚蠢的。
+ */
 
 class CommandCd : public Command {
 public:
@@ -114,12 +161,46 @@ private:
 		kLt,		// -lt
 		kNe,		// -ne
 	};
+	/**
+	 * 判断参数是不是一个选项
+	 * @param str 待判断的参数
+	 * @return true 代表是选项
+	 */
 	bool IsOption(const std::string& str);
+
+	/**
+	 * 判断选项具体是哪一个选项
+	 * @param str 待判断的选项
+	 * @return 选项 id
+	 */
 	Option WhichOption(const std::string& str);
 
+	/**
+	 * 判断 str 对应的文件是不是目录
+	 * @param str 待判断的文件名
+	 * @return true 代表是目录
+	 */
 	int CheckDir(const std::string& str);
+
+	/**
+	 * 判断 str 对应的文件是不是普通文件
+	 * @param str 待判断的文件名
+	 * @return true 代表是普通文件
+	 */
 	int CheckFile(const std::string& str);
+
+	/**
+	 * 判断 str 对应的文件是否存在
+	 * @param str
+	 * @return true 代表存在
+	 */
 	int CheckExist(const std::string& str);
+
+	/**
+	 * 比较 lhs op rhs 是否成立
+	 * @param op 比较符号
+	 * @return 1 代表 lhs op rhs 成立
+	 */
 	int Compare(const Option& op, int lhs, int rhs);
 };
 
@@ -156,11 +237,15 @@ public:
 
 class CommandFactory {
 public:
+	/**
+	 * 返回全局唯一的 CommandFactory 对象
+	 * @return 全局唯一的 CommandFactory 对象
+	 */
 	static CommandFactory* Instance();
 	Command* GetCommand(const std::string& name);
 
 private:
-	static CommandFactory* theFactory;
+	static CommandFactory* theFactory;	// 全局唯一的 CommandFactory
 };
 
 #endif //MYSHELL_COMMANDS_H

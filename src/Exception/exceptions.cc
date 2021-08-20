@@ -9,6 +9,7 @@ Exception::Exception(const std::string& str) {
 }
 
 void Exception::ShowInfo() {
+	// 打印 Exception 信息
 	fprintf(stderr, _info.c_str());
 	fputc('\n', stderr);
 }

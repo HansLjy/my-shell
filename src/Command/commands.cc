@@ -35,50 +35,50 @@ int WhichRedirect(const std::string& arg) {
 void Command::Redirect() {
 	// 重定向文件的时候按照局部覆盖全局要求的原则，即显示的重定向大于管道的要求
 	if (_in_red != STDIN_FILENO) {
-		dup2(_in_red, STDIN_FILENO);
+		dup2(_in_red, STDIN_FILENO);	// 重定向 stdin 为 _in_red
 	} else if (_in != STDIN_FILENO) {
-		dup2(_in, STDIN_FILENO);
+		dup2(_in, STDIN_FILENO);		// 重定向 stdin 为 _in
 	}
 	if (_out_red != STDOUT_FILENO) {
-		dup2(_out_red, STDOUT_FILENO);
+		dup2(_out_red, STDOUT_FILENO);	// 重定向 stdout 为 _out_red
 	} else if (_out != STDOUT_FILENO) {
-		dup2(_out, STDOUT_FILENO);
+		dup2(_out, STDOUT_FILENO);		// 重定向 stdout 为 _out
 	}
 	if (_err_red != STDERR_FILENO) {
-		dup2(_err_red, STDERR_FILENO);
+		dup2(_err_red, STDERR_FILENO);	// 重定向 stderr 为 _err_red
 	} else if (_err != STDERR_FILENO) {
-		dup2(_err, STDERR_FILENO);
+		dup2(_err, STDERR_FILENO);		// 重定向 stderr 为 _err
 	}
 }
 
 // 拷贝输入输出文件
 void Command::CopyFiles() {
-	_stdin = dup(STDIN_FILENO);
-	_stdout = dup(STDOUT_FILENO);
-	_stderr = dup(STDERR_FILENO);
+	_stdin = dup(STDIN_FILENO);		// 备份 stdin
+	_stdout = dup(STDOUT_FILENO);	// 备份 stdout
+	_stderr = dup(STDERR_FILENO);	// 备份 stderr
 }
 
 // 恢复标准输入输出文件
 void Command::RecoverFiles() {
-	dup2(_stdin, STDIN_FILENO);
-	dup2(_stdout, STDOUT_FILENO);
-	dup2(_stderr, STDERR_FILENO);
+	dup2(_stdin, STDIN_FILENO);		// 恢复 stdin
+	dup2(_stdout, STDOUT_FILENO);	// 恢复 stdout
+	dup2(_stderr, STDERR_FILENO);	// 恢复 stderr
 }
 
 // 关闭所有重定向之后的文件
 void Command::CloseFiles() {
 	if (_in != STDIN_FILENO)
-		close(_in);
+		close(_in);					// 关闭 in
 	if (_out != STDOUT_FILENO)
-		close(_out);
+		close(_out);				// 关闭 out
 	if (_err != STDERR_FILENO)
-		close(_err);
+		close(_err);				// 关闭 err
 	if (_in_red != STDIN_FILENO)
-		close(_in_red);
+		close(_in_red);				// 关闭 in_red
 	if (_out_red != STDOUT_FILENO)
-		close(_out_red);
+		close(_out_red);			// 关闭 out_red
 	if (_err_red != STDERR_FILENO)
-		close(_err_red);
+		close(_err_red);			// 关闭 err_red
 }
 
 /*
@@ -90,11 +90,12 @@ int Command::Execute(const Sentence &args, int infile, int outfile, int errfile)
 	_in = infile;
 	_out = outfile;
 	_err = errfile;
-	int argc = args.size();
+	int argc = args.size();	// 包含重定向在内的参数个数
 	int arg_id = 1;
-	while (arg_id < argc && WhichRedirect(args.at(arg_id)) == -1)
+	while (arg_id < argc && WhichRedirect(args.at(arg_id)) == -1)	// 找到第一个重定向信息
 		arg_id++;
-	_argc = arg_id;	// 参数到此为止
+	_argc = arg_id;			// 实际的参数
+
 	// 以下都是重定向信息
 	while (arg_id < argc) {
 		int redirect = WhichRedirect(args.at(arg_id));
@@ -129,11 +130,11 @@ int Command::Execute(const Sentence &args, int infile, int outfile, int errfile)
 		arg_id += 2;
 	}
 	// 开始重定向
-	CopyFiles();
+	CopyFiles();	// 备份标准输入输出
 	Redirect();
 	int ret = RealExecute(args);
 	CloseFiles();
-	RecoverFiles();
+	RecoverFiles();	// 恢复标准输入输出
 	SpecialVarPool::Instance()->SetReturn(ret);
 	return ret;
 }
@@ -154,6 +155,7 @@ int CommandCd::RealExecute(const Sentence &args) {
 		fprintf(stderr, "cd: too many arguments.\n");
 		return 1;
 	}
+	// 不加参数的时候默认是 $HOME
 	const char *target = args.size() == 1 ? getenv("HOME") : args[1].c_str();
 	return chdir(target);
 }
@@ -165,6 +167,7 @@ int CommandDir::RealExecute(const Sentence &args) {
 		fprintf(stderr, "dir: too many arguments.\n");
 		return 1;
 	}
+	// 不加参数的时候默认是 .
 	const char * target = args.size() == 1 ? "." : args[1].c_str();
 	auto dir = opendir(target);	// 打开目标文件夹
 	if (dir == nullptr) {
@@ -181,6 +184,7 @@ int CommandDir::RealExecute(const Sentence &args) {
 
 // Tested
 int CommandEcho::RealExecute(const Sentence &args) {
+	// 按顺序打印
 	for (int i = 1; i < _argc; i++) {
 		fprintf(stdout, "%s ", args[i].c_str());
 	}
@@ -196,10 +200,11 @@ int CommandExit::RealExecute(const Sentence &args) {
 // Tested
 int CommandPwd::RealExecute(const Sentence &args) {
 	if (_argc > 1) {
+		// pwd 不能有参数
 		fprintf(stderr, "pwd: too many arguments.\n");
 		return 1;
 	}
-	char* pwd = get_current_dir_name();
+	char* pwd = get_current_dir_name();	// 获得当前工作目录
 	fprintf(stdout, "%s\n", pwd);
 	return 0;
 }
@@ -224,7 +229,6 @@ int CommandTime::RealExecute(const Sentence &args) {
 }
 
 // Tested
-// 注意 CLion 自带的窗口由于是只读的所以会有问题
 int CommandClr::RealExecute(const Sentence &args) {
 	if (_argc > 1) {
 		// clr 不带参数
@@ -238,15 +242,17 @@ int CommandClr::RealExecute(const Sentence &args) {
 // Tested
 int CommandExec::RealExecute(const Sentence &args) {
 	if (_argc < 2) {
+		// exec 不能没有参数
 		fprintf(stderr, "exec: too few arguments\n");
 		return 1;
 	}
+	// 执行新命令
 	auto command = CommandFactory::Instance()->GetCommand(args[1].c_str());
 	Sentence new_args;
 	for (int i = 1; i < _argc; i++) {
 		new_args.push_back(args[i]);
 	}
-	exit(command->Execute(new_args, _in_red, _out_red, _err_red));
+	exit(command->Execute(new_args, _in_red, _out_red, _err_red));	// 运行完立马退出
 }
 
 // Tested
@@ -258,6 +264,7 @@ int CommandSet::RealExecute(const Sentence &args) {
 			globals->SetArg(i, args[i].c_str());
 		}
 	} else {
+		// 打印所有环境变量
 		extern char** environ;	// 环境变量数组
 		for (int index = 0; environ[index] != nullptr; index++) {
 			// 逐个打印
@@ -271,9 +278,11 @@ int CommandSet::RealExecute(const Sentence &args) {
 // Tested
 int CommandUnset::RealExecute(const Sentence &args) {
 	if (_argc < 2) {
+		// unset 不能没有参数
 		fprintf(stderr, "unset: too few arguments\n");
 		return 1;
 	}
+	// 逐个删除
 	for (int i = 1; i < _argc; i++) {
 		unsetenv(args[i].c_str());
 	}
@@ -284,6 +293,7 @@ int CommandUnset::RealExecute(const Sentence &args) {
 int CommandShift::RealExecute(const Sentence &args) {
 	auto globals = SpecialVarPool::Instance();
 	if (args.size() > 2) {
+		// shift 不能有超过两个的参数
 		fprintf(stderr, "shift: too many arguments\n");
 		globals->SetReturn(1);
 		return 1;
@@ -294,6 +304,7 @@ int CommandShift::RealExecute(const Sentence &args) {
 	}
 	int success = globals->Shift(shift);
 	if (!success) {
+		// 越界
 		fprintf(stderr, "shift: n should be in range [0, argc]\n");
 		return 1;
 	}
@@ -311,12 +322,12 @@ typename CommandTest::Option CommandTest::WhichOption(const std::string &str) {
 	if (str == "-d")	return kDir;
 	if (str == "-f")	return kFile;
 	if (str == "-e")	return kExist;
-	if (str == "-eq")	return kEq;
+	if (str == "-eq")	return kEq;		// 如果你觉得五行内一定要注释的话，这就是你想要的
 	if (str == "-ge")	return kGe;
 	if (str == "-gt")	return kGt;
 	if (str == "-le")	return kLe;
 	if (str == "-lt")	return kLt;
-	if (str == "-ne")	return kNe;
+	if (str == "-ne")	return kNe;		// 如果你觉得五行内一定要注释的话，这就是你想要的
 	return kInvalid;
 }
 
@@ -326,11 +337,11 @@ int CommandTest::Compare(const Option &op, int lhs, int rhs) {
 	switch (op) {
 		case kEq:	return lhs == rhs;
 		case kGe:	return lhs >= rhs;
-		case kGt:	return lhs > rhs;
+		case kGt:	return lhs > rhs;	// 如果你觉得五行内一定要注释的话，这就是你想要的
 		case kLe:	return lhs <= rhs;
 		case kLt:	return lhs < rhs;
 		case kNe:	return rhs != rhs;
-	}
+	}									// 如果你觉得五行内一定要注释的话，这就是你想要的
 	return true;
 }
 
@@ -364,10 +375,12 @@ int CommandTest::CheckExist(const std::string &str) {
  */
 int CommandTest::RealExecute(const Sentence &args) {
 	if (_argc < 2) {
+		// test 不能没有煮熟
 		fprintf(stderr, "test: too few arguments\n");
 		return 1;
 	}
 	if (IsOption(args[1])) {
+		// 此时是判定文件
 		auto op = WhichOption(args[1]);
 		if (_argc != 3) {
 			// 此时只可能是 test -d file 这样的形式
@@ -375,30 +388,33 @@ int CommandTest::RealExecute(const Sentence &args) {
 			return 1;
 		}
 		switch (op) {
+			// 下面的输出取反是因为 shell 习惯用 0 表示正确结束
 			case kDir: 		return !CheckDir(args[2]);
 			case kFile: 	return !CheckFile(args[2]);
 			case kExist:	return !CheckExist(args[2]);
 			default:
-				fprintf(stderr, "test: invalid option");
+				fprintf(stderr, "test: invalid option");	// 不合法参数
 				return 1;
 		}
 		// -d -f -e 三种情况
 	} else {
+		// 此时是判定整数
 		if (_argc != 4) {
 			fprintf(stderr, "test: too many or too few arguments\n");
+			return 1;
 		}
 		auto op = WhichOption(args[2]);
-		int lhs = atoi(args[1].c_str());
-		int rhs = atoi(args[3].c_str());
+		int lhs = atoi(args[1].c_str());	// lhs 转化为数字
+		int rhs = atoi(args[3].c_str());	// rhs 转化为数字
 		switch (op) {
 			case kEq:
 			case kGe:
 			case kGt:
-			case kLe:
+			case kLe:	// 如果你觉得五行内一定要注释的话，这就是你想要的
 			case kLt:
 			case kNe:
 				return !Compare(op, lhs, rhs);
-			default:
+			default:	// 如果你觉得五行内一定要注释的话，这就是你想要的
 				fprintf(stderr, "test: invalid option");
 				return 1;
 		}
@@ -423,42 +439,43 @@ int CommandUmask::RealExecute(const Sentence &args) {
 	} else {
 		// 改变 umask
 		mode_t mode;
-		char *end;
-		mode = strtoul(args[1].c_str(), &end, 8);
+		char *end;	// 用来判断是否合法
+		mode = strtoul(args[1].c_str(), &end, 8);	// 看作八进制输入
 		if (*end != '\0') {
 			fprintf(stderr, "umask: invalid mask\n");
 			return 1;
 		}
-		umask(mode);
+		umask(mode);	// 更新 mask
 		return 0;
 	}
 }
 
 // Tested
-// 执行外部命令
 int CommandExternal::RealExecute(const Sentence &args) {
-	static char str[300] = "parent=";
+	static char str[300] = "parent=";	// parent 环境变量
 	char *p;
-	readlink("/proc/self/exe", str + strlen(str), 300);
+	readlink("/proc/self/exe", str + strlen(str), 300);	// 获得运行目录
 	if ((p = strrchr(str,'/')) != NULL)
 		*p = '\0';
-	strcat(str, "/MyShell");
-	char *Env[] = {str, NULL};
+	strcat(str, "/MyShell");	// 获得可执行文件的地址
+	char *Env[] = {str, NULL};		// 环境变量数组
 	auto p_args = new char*[_argc + 1];	// 用来拷贝 execvp 的参数表
 	for (int i = 0; i < _argc; i++) {
 		// 将 args[i] 的内容拷贝到 p_args[i] 中
 		p_args[i] = new char[args[i].size() + 1];
 		strcpy(p_args[i], args[i].c_str());
 	}
-	p_args[_argc] = nullptr;
+	p_args[_argc] = nullptr;		// 保证数组以 NULL 正确结尾
 	execvpe(args[0].c_str(), p_args, Env);
+	// 清理工作，只有 exec 失败才会进行
 	for (int i = 0; i < _argc; i++) {
 		delete [] p_args[i];
 	}
 	delete [] p_args;
-	return 1;
+	return 1;	// 只有 exec 失败才可能到这一步
 }
 
+// tested
 int CommandJobs::RealExecute(const Sentence &args) {
 	auto job_pool = JobPool::Instance();
 	job_pool->PrintJobs();
@@ -474,10 +491,11 @@ int CommandFg::RealExecute(const Sentence &args) {
 			fprintf(stderr, "fg: too many or too few arguments\n");
 			return 1;
 		}
-		int id = strtoul(args[1].c_str(), nullptr, 10);
+		int id = strtoul(args[1].c_str(), nullptr, 10);	// 取得 id
 		auto job_pool = JobPool::Instance();
-		int pid = job_pool->GetPID(id);
+		int pid = job_pool->GetPID(id);	// 取得 pid
 		if (pid < 0) {
+			// 不合法的 id 号
 			fprintf(stderr, "fg: invalid job id\n");
 			return 1;
 		}
@@ -485,7 +503,7 @@ int CommandFg::RealExecute(const Sentence &args) {
 		kill(-pid, SIGCONT);	// 为了防止卡死，得发送 CONT 信号
 		int status;
 		waitpid(pid, &status, WUNTRACED);
-		ReportStatus(pid, status);
+		ReportStatus(pid, status);	// 任何主进程的等待必须报告状态
 		printf("%d\n", getpgrp());
 		tcsetpgrp(STDIN_FILENO, getpgrp());
 	}
@@ -501,10 +519,11 @@ int CommandBg::RealExecute(const Sentence &args) {
 			fprintf(stderr, "bg: too many or too few arguments\n");
 			return 1;
 		}
-		int id = strtoul(args[1].c_str(), nullptr, 10);
+		int id = strtoul(args[1].c_str(), nullptr, 10);	// 取得 id
 		auto job_pool = JobPool::Instance();
-		int pid = job_pool->GetPID(id);
+		int pid = job_pool->GetPID(id);	// 取得 pid
 		if (pid < 0) {
+			// id 不合法
 			fprintf(stderr, "bg: Invalid job id\n");
 			return 1;
 		}
@@ -517,11 +536,13 @@ int CommandBg::RealExecute(const Sentence &args) {
 
 int CommandHelp::RealExecute(const Sentence &args) {
 	if (_argc > 2) {
+		// 参数太多
 		fprintf(stderr, "help: too many arguments");
 		return 1;
 	}
 	auto helper = Helper::Instance();
 	if (_argc == 1) {
+		// 不指定具体的命令，打印所有
 		helper->PrintAll();
 	} else {
 		helper->PrintHelp(args[1]);
@@ -531,10 +552,10 @@ int CommandHelp::RealExecute(const Sentence &args) {
 
 CommandFactory* CommandFactory::theFactory = nullptr;
 
+// 返回全局唯一 factory
 CommandFactory *CommandFactory::Instance() {
-	if (theFactory == nullptr) {
+	if (theFactory == nullptr)
 		theFactory = new CommandFactory;
-	}
 	return theFactory;
 }
 
@@ -542,19 +563,19 @@ Command *CommandFactory::GetCommand(const std::string &name) {
 	if (name == "cd") return new CommandCd;
 	if (name == "dir") return new CommandDir;
 	if (name == "echo") return new CommandEcho;
-	if (name == "exit") return new CommandExit;
+	if (name == "exit") return new CommandExit;// 如果你觉得五行内一定要注释的话，这就是你想要的
 	if (name == "pwd") return new CommandPwd;
 	if (name == "time") return new CommandTime;
 	if (name == "clr") return new CommandClr;
-	if (name == "exec") return new CommandExec;
+	if (name == "exec") return new CommandExec;// 如果你觉得五行内一定要注释的话，这就是你想要的
 	if (name == "set") return new CommandSet;
 	if (name == "unset") return new CommandUnset;
 	if (name == "shift") return new CommandShift;
-	if (name == "test") return new CommandTest;
+	if (name == "test") return new CommandTest;// 如果你觉得五行内一定要注释的话，这就是你想要的
 	if (name == "umask") return new CommandUmask;
 	if (name == "jobs") return new CommandJobs;
 	if (name == "fg") return new CommandFg;
-	if (name == "bg") return new CommandBg;
+	if (name == "bg") return new CommandBg;// 如果你觉得五行内一定要注释的话，这就是你想要的
 	if (name == "help") return new CommandHelp;
 	return new CommandExternal;
 }

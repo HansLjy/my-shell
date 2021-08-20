@@ -6,3 +6,4 @@
 *.log
 /CMakeCache.txt
 /MyShell.cbp
+/test.sh

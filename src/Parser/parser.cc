@@ -2,7 +2,6 @@
 // Created by hansljy on 2021/8/8.
 //
 
-#include <cassert>
 #include <stack>
 #include <sstream>
 #include "parser.h"
@@ -123,6 +122,7 @@ Node *Parser::Parse(char *str) {
 			if (op_id >= kMinValidId) {	// 如果是符号
 				Operator cur_op = GetOperator(op_id);
 				while (!operator_stack.empty()) {
+					// 只要是符号
 					int top_id = operator_stack.top();
 					Operator top_op = GetOperator(top_id);
 					if (top_op._rank >= cur_op._rank) {
@@ -137,7 +137,7 @@ Node *Parser::Parse(char *str) {
 					MergeNode(operator_stack, operand_stack);
 				}
 				if (operator_stack.empty()) {
-					ClearUp(operand_stack);
+					ClearUp(operand_stack);	// 异常处理前清理
 					throw Exception ("Unpaired right bracket!");
 				}
 				operator_stack.pop();
@@ -145,7 +145,7 @@ Node *Parser::Parse(char *str) {
 				// 如果是左括号，直接压入栈中
 				operator_stack.push(op_id);
 			} else {
-				ClearUp(operand_stack);
+				ClearUp(operand_stack);	// 异常处理前清理
 				throw Exception ("What the hack is this ID?");
 			}
 		}
@@ -157,28 +157,29 @@ Node *Parser::Parse(char *str) {
 		operand_stack.push(node);
 	}
 	if (operand_stack.size() == operator_stack.size()) {
+		// 最后一个 token 是 符号而不是命令，添加一个空节点
 		operand_stack.push(node_factory->CreateNullNode());
 	}
 	if (operand_stack.size() != operator_stack.size() + 1) {
-		ClearUp(operand_stack);
+		ClearUp(operand_stack);	// 异常前清理
 		throw Exception("Unexpected token, need operator to connect them");
 	}
 	while (!operator_stack.empty() && operator_stack.top() != kLeftBracket) {
 		MergeNode(operator_stack, operand_stack);
 	}
 	if (!operator_stack.empty()) {	// 如果还有左括号没有匹配完
-		ClearUp(operand_stack);
+		ClearUp(operand_stack);	// 异常前清理
 		throw Exception("Unpaired Left Bracket!");
 	}
 	Node* ret = operand_stack.top();
 	operand_stack.pop();
-	assert(operand_stack.empty());
 	return ret;
 }
 
 int Parser::WhichOperator(const Token& token) {
 	int size = _operators.size();
 	for (int i = 0; i < size; i++) {
+		// 枚举符号
 		if (_operators[i]._token == token) {
 			return i;
 		}

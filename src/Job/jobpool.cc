@@ -11,14 +11,14 @@ Job::Job(Status status, pid_t pid, const std::string& str)
 JobPool* JobPool::thePool = nullptr;
 
 JobPool *JobPool::Instance() {
-	if (thePool == nullptr) {
+	// Singleton 模式
+	if (thePool == nullptr)
 		thePool = new JobPool;
-	}
 	return thePool;
 }
 
 int JobPool::AddJob(pid_t pid, const std::string &str) {
-	int size = _jobs.size();
+	int size = _jobs.size();	// 数组大小
 	for (int i = 0; i < size; i++) {
 		if (_jobs[i]._status == Job::kDone || _jobs[i]._status == Job::kKilled) {
 			// 如果任务已经完成了，则可以被替换掉
@@ -36,6 +36,7 @@ int JobPool::GetPID(int idx) {
 		return -1;
 	}
 	if (_jobs[idx]._status == Job::kDone || _jobs[idx]._status == Job::kKilled) {
+		// 作业不在运行
 		return -1;
 	}
 	return _jobs[idx]._pid;
@@ -45,6 +46,7 @@ void JobPool::ChangeState(pid_t pgid, Job::Status status) {
 	int size = _jobs.size();
 	for (int i = 0; i < size; i++) {
 		if (_jobs[i]._pid == pgid) {
+			// 找到 pid
 			_jobs[i]._status = status;
 			_changed_jobs.push(_jobs[i]);
 			break;
@@ -55,17 +57,18 @@ void JobPool::ChangeState(pid_t pgid, Job::Status status) {
 void JobPool::PrintJobs() {
 	int size = _jobs.size();
 	for (int i = 0; i < size; i++) {
+		// 遍历作业
 		const auto& job = _jobs[i];
 		if (job._status != Job::kDone && job._status != Job::kKilled) {
 			fprintf(stdout, "[%d]\t%d", i, job._pid);
 			switch (job._status) {
-				case Job::kRunning:
+				case Job::kRunning:	// 运行
 					fprintf(stdout, "\tRunning\t");
 					break;
-				case Job::kSuspended:
+				case Job::kSuspended:	// 挂起
 					fprintf(stdout, "\tSuspended\t");
 					break;
-				case Job::kForeground:
+				case Job::kForeground:	// 前台
 					fprintf(stdout, "\tForeground\t");
 					break;
 			}
@@ -78,16 +81,16 @@ void JobPool::PrintFinished() {
 	while (!_changed_jobs.empty()) {
 		Job job = _changed_jobs.front();
 		switch (job._status) {
-			case Job::kDone:
+			case Job::kDone:	// 完成
 				fprintf(stdout, "Done:\t");
 				break;
-			case Job::kKilled:
+			case Job::kKilled:	// 杀死
 				fprintf(stdout, "Killed:\t");
 				break;
-			case Job::kSuspended:
+			case Job::kSuspended:	// 挂起
 				fprintf(stdout, "Suspended:\t");
 				break;
-			case Job::kRunning:
+			case Job::kRunning:	// 运行
 				fprintf(stdout, "Continued:\t");
 				break;
 		}
@@ -100,7 +103,7 @@ void JobPool::PrintFinished() {
 void CHLDHandler (int sig) {
 	int status;
 	auto job_pool = JobPool::Instance();
-	auto & jobs = job_pool->_jobs;
+	auto & jobs = job_pool->_jobs;	// 作业
 	for (auto & job : jobs) {
 		if (
 			job._status == Job::kDone
@@ -109,6 +112,7 @@ void CHLDHandler (int sig) {
 		)
 			continue;
 		if(waitpid(job._pid, &status, WNOHANG | WUNTRACED | WCONTINUED) > 0) {
+			// 找到状态发生变化的作业
 			ReportStatus(job._pid, status);
 			break;
 		}

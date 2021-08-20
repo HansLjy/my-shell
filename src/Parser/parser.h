@@ -22,18 +22,23 @@ struct Operator {
  * Parser：命令解释器
  * 简介：
  * 	此命令解释器只能处理非常简单的语法，但是对于 shell 来说足够了
- * 	通过 AddOperator 函数来按照优先级从高到底的顺序添加运算符。
  * 	调用 Parse 来将一个字符串转化为语法树
  */
 class Parser {
 public:
 	static Parser* Instance();	// Singleton 模式
 
-	/*
-	 * AddOperator(op)
-	 * 向 Parser 中添加一个符号 op
+	/**
+	 * 为解释器添加符号
+	 * @param op 待添加符号
 	 */
 	void AddOperator(const Operator& op);
+
+	/**
+	 * 解析
+	 * @param str 待解析的命令
+	 * @return 语法树的跟节点
+	 */
 	Node* Parse(char* str);
 
 private:
@@ -43,21 +48,41 @@ private:
 	static const int kRightBracket = 1;
 	static const int kMinValidId = 2;
 
-	/*
-	 * int WhichOperator(token)
-	 * 返回符号的 ID
-	 * 返回值：
-	 * 	>= 0 符号的 ID
-	 * 		特别的： 0 约定为 "("，1 约定为 ")"
+	/**
+	 * 判断符号类型
+	 * @param token 待判断的符号
+	 * @return
+	 * 	>= 0 符号的 ID (特别的： 0 约定为 "("，1 约定为 ")")
 	 * 	-1 不是符号
 	 */
 	int WhichOperator(const Token& token);
-	Operator GetOperator(int id);			// 根据 ID 返回符号
-	void Replace(std::string& token);		// 使用环境变量进行替换
-	void MergeNode (std::stack<int>&, std::stack<Node*>&);
-	std::vector<Operator> _operators;		// 存储的运算符
 
-	void ClearUp(std::stack<Node*>&);		// 发生 exception 的时候完成清理工作
+	/**
+	 * 根据 ID 返回符号
+	 * @param id 符号 id
+	 * @return 符号
+	 */
+	Operator GetOperator(int id);
+
+	/**
+	 * 使用环境变量进行替换实际的 token
+	 * @param token 实际的 token
+	 */
+	void Replace(std::string& token);
+
+	/**
+	 * 把栈顶所有用相同符号链接的操作数压缩成一个
+	 * @param operators 符号栈
+	 * @param operands 操作数栈
+	 */
+	void MergeNode (std::stack<int>& operators, std::stack<Node*>& operands);
+
+	/**
+	 * 发生 Exception 的时候执行清理工作
+	 */
+	void ClearUp(std::stack<Node*>&);
+
+	std::vector<Operator> _operators;		// 存储的运算符
 
 };
 

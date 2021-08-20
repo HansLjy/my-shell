@@ -6,7 +6,7 @@
 #include <cstring>
 
 Deliminator::Deliminator(char *str) : _cur(0), _len(strlen(str)) {
-	_str = new char[_len + 1];
+	_str = new char[_len + 1];	// 创建新 str 数组
 	strcpy(_str, str);
 }
 

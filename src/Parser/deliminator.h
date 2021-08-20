@@ -10,8 +10,7 @@
 /*
  * Deliminator：文本划分器
  * 简介：将文本按照空格划分成词语
- * 警告：
- * 	1. 一旦使用字符串初始化
+ * 使用方式：使用 str 进行配置，之后不断调用 GetNext 取得一个个分词
  */
 class Deliminator {
 public:

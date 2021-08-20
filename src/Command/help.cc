@@ -2,6 +2,8 @@
 // Created by hansljy on 2021/8/17.
 //
 
+// 这本来就是提示信息了，没必要写注释了吧？？？
+
 #include "help.h"
 
 void HelpInfo::Print() {
