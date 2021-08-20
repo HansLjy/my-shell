@@ -273,7 +273,7 @@ void LeafNode::Execute(bool is_shell, bool cont,  int infile, int outfile, int e
 	auto jobpool = JobPool::Instance();
 	CommandFactory* factory = CommandFactory::Instance();
 	auto command = factory->GetCommand(_sentence[0]);
-	if (Command::IsExternal(command) && is_foreground) {
+	if (Command::IsExternal(command)) {
 		// 如果是外部命令，并且是前台进程。则需要单独开一个进程来做
 		auto pid = fork();
 		if (pid == 0) {

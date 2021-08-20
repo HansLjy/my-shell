@@ -2,12 +2,14 @@
 #include <unistd.h>
 
 #include <iostream>
+#include <cstring>
 #include "CLI.h"
 #include "exceptions.h"
 #include "global.h"
 #include "jobpool.h"
 
 void Init() {
+	static char str[300] = "SHELL=";	// putenv 需要使用 str,所以不能是 auto 型的
 	int shell_terminal = STDIN_FILENO;
 	int shell_is_interactive = isatty (shell_terminal);					// 是否是交互式的shell
 	int shell_pgid;
@@ -34,16 +36,27 @@ void Init() {
 		// 控制终端
 		tcsetpgrp (shell_terminal, shell_pgid);
 	}
+	char *p;
+	readlink("/proc/self/exe", str + strlen(str), 300);
+	if ((p = strrchr(str,'/')) != NULL)
+		*p = '\0';
+	strcat(str, "/MyShell");
+	putenv(str);
 }
 
 int main(int argc, char* argv[]) {
-	Init();
 	auto globals = SpecialVarPool::Instance();
 	for (int i = argc - 1; i >= 0; i--) {
 		globals->SetArg(i, argv[i]);
 	}
+	Init();
 	CLI *cli = CLI::Instance();
 	cli->Initialization();
-	cli->Start();
+	if (argc == 1) {
+		cli->Start(true);
+	} else {
+		freopen(argv[1], "r", stdin);
+		cli->Start(false);
+	}
     return 0;
 }

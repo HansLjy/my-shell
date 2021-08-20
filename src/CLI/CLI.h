@@ -12,7 +12,7 @@ public:
     static CLI* Instance();
     void Initialization();
 
-	void Start();
+	void Start(bool is_shell);
 private:
     static CLI* theCLI;
     std::string prompt;

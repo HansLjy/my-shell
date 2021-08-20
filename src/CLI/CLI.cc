@@ -41,17 +41,21 @@ void CLI::Initialization() {
 	});
 }
 
-void CLI::Start() {
+void CLI::Start(bool is_shell) {
 	auto parser = Parser::Instance();
 	auto job_pool = JobPool::Instance();
 	while (true) {
-		prompt = getlogin();	// 获取用户名
-		prompt = prompt + ":";	// 分隔用户名和路径
-		prompt = prompt + get_current_dir_name();
+		if (is_shell) {
+			fprintf(stdout, "\033[47;30m%s:", getlogin());
+			fprintf(stdout, "\033[40;37m%s>", get_current_dir_name());
+			fprintf(stdout, "\033[0m");
+		}
 		char *line = nullptr;
 		size_t len = 0;
-		fprintf(stdout, "%s$", prompt.c_str());
-		getline(&line, &len, stdin);
+		int ret = getline(&line, &len, stdin);
+		if (ret < 0) {
+			break;
+		}
 		line[strlen(line) - 1] = '\0';	// 替换掉行末的空格
 		Node* res;
 		try {
@@ -61,10 +65,12 @@ void CLI::Start() {
 			free(line);
 			continue;
 		}
-        res->Execute(true, true, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
+        res->Execute(is_shell, true, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO);
 		delete res;
         free(line);
 
-        job_pool->PrintFinished();
+        if (is_shell) {
+        	job_pool->PrintFinished();
+        }
     }
 }

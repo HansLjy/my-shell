@@ -147,11 +147,6 @@ bool Command::IsExternal(Command *cmd) {
 	}
 }
 
-// write 的多态
-void write(int fd, const char* str) {
-	write(fd, str, strlen(str) * sizeof (char));
-}
-
 // Tested
 int CommandCd::RealExecute(const Sentence &args) {
 	if (_argc > 2) {
@@ -159,7 +154,7 @@ int CommandCd::RealExecute(const Sentence &args) {
 		fprintf(stderr, "cd: too many arguments.\n");
 		return 1;
 	}
-	const char *target = args.size() == 1 ? "~" : args[1].c_str();
+	const char *target = args.size() == 1 ? getenv("HOME") : args[1].c_str();
 	return chdir(target);
 }
 
@@ -220,7 +215,7 @@ int CommandTime::RealExecute(const Sentence &args) {
 	time_t cur_time;
 	time(&cur_time);	// 获得当前时间参数
 	tm* info = localtime(&cur_time);
-	sprintf(buf, "%d.%d.%d %d:%d:%d\n",
+	sprintf(buf, "%d.%d.%d %02d:%02d:%02d\n",
 			info->tm_year + 1900, info->tm_mon + 1, info->tm_mday,	// 年月日
 			info->tm_hour, info->tm_min, info->tm_sec				// 时分秒
 			);
@@ -442,6 +437,13 @@ int CommandUmask::RealExecute(const Sentence &args) {
 // Tested
 // 执行外部命令
 int CommandExternal::RealExecute(const Sentence &args) {
+	static char str[300] = "parent=";
+	char *p;
+	readlink("/proc/self/exe", str + strlen(str), 300);
+	if ((p = strrchr(str,'/')) != NULL)
+		*p = '\0';
+	strcat(str, "/MyShell");
+	char *Env[] = {str, NULL};
 	auto p_args = new char*[_argc + 1];	// 用来拷贝 execvp 的参数表
 	for (int i = 0; i < _argc; i++) {
 		// 将 args[i] 的内容拷贝到 p_args[i] 中
@@ -449,7 +451,7 @@ int CommandExternal::RealExecute(const Sentence &args) {
 		strcpy(p_args[i], args[i].c_str());
 	}
 	p_args[_argc] = nullptr;
-	execvp(args[0].c_str(), p_args);
+	execvpe(args[0].c_str(), p_args, Env);
 	for (int i = 0; i < _argc; i++) {
 		delete [] p_args[i];
 	}
